@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+
+wget https://adventofcode.com/2023/day/$1/input
+mv input input_$1
