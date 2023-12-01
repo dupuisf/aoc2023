@@ -12,8 +12,8 @@ def realinput : FilePath := "/home/fred/lean/aoc2023/input_01"
 PART 1:
 -/
 
-def first_part (input : FilePath) : IO Nat := do
-  let rawdata := (← IO.FS.lines input)
+def firstPart (input : FilePath) : IO Nat := do
+  let rawdata ← IO.FS.lines input
   let data := rawdata.map (fun s => s.toCharArray.filter (·.isDigit))
                     |>.map fun as => as[0]!.toNatDigit * 10 + as[as.size-1]!.toNatDigit
   return data.sum
@@ -59,8 +59,8 @@ partial def getFirstNum : Parsec Nat :=
 partial def getFirstNumBackwards : Parsec Nat :=
   parseNumberBackwards <|> (do let _ ← anyChar; getFirstNumBackwards)
 
-def second_part (input : FilePath) : IO Nat := do
-  let rawdata := (← IO.FS.lines input)
+def secondPart (input : FilePath) : IO Nat := do
+  let rawdata ← IO.FS.lines input
   let firstDigits := rawdata.map fun s => s.yoloParse getFirstNum
   let lastDigits := rawdata.map fun s => s.reverse.yoloParse getFirstNumBackwards
   let lines := firstDigits.zipWith lastDigits fun a b => 10*a + b
