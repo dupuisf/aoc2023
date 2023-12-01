@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+
+lake build
+./aoc 15 t

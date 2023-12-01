@@ -16,3 +16,4 @@ lean_exe «aoc2023» where
   --supportInterpreter := true
 
 require std from git "https://github.com/leanprover/std4" @ "main"
+require aesop from git "https://github.com/leanprover-community/aesop" @ "master"
