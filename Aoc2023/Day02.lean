@@ -1,6 +1,6 @@
 import Aoc2023.Utils
 
-open System
+open System Lean Lean.Parsec
 
 namespace Day02
 
@@ -23,70 +23,70 @@ instance : ToString Color where
                 | .green => "green"
                 | .blue => "blue"
 
+structure Triple where
+  r : Nat
+  g : Nat
+  b : Nat
 
-def _root_.String.toColor : String → Color
-| "red" => .red
-| "green" => .green
-| "blue" => .blue
-| _ => .red
+instance : ToString Triple where
+  toString t := s!"⟪{t.r}, {t.g}, {t.b}⟫"
 
-/-- "2 blue" -> ⟨2, .blue⟩ -/
-def getItem (s : String) : Nat × Color :=
-  let l := s.splitOn " "
-  ⟨l[0]!.toNat!, l[1]!.toColor⟩
+def parseColor : Parsec Color :=
+  (do let _ ← pstring "red"; return .red)
+  <|> (do let _ ← pstring "green"; return .green)
+  <|> (do let _ ← pstring "blue"; return .blue)
 
-def getRound (s : String) : Nat × Nat × Nat :=
-  let spl := (s.split (· == ',')).map String.trim
-  let items := spl.map getItem
-  items.foldl (init := ⟨0,0,0⟩) fun cur item =>
+def parseItem : Parsec (Nat × Color) := do
+  let num ← natNum
+  ws
+  let color ← parseColor
+  return ⟨num, color⟩
+
+def parseRound : Parsec Triple := do
+  let items ← (sepBy parseItem (pstring ", "))
+  return items.foldl (init := (⟨0,0,0⟩ : Triple)) fun cur item =>
     match item.2 with
-    | .red => ⟨item.1, cur.2.1, cur.2.2⟩
-    | .green => ⟨cur.1, item.1, cur.2.2⟩
-    | .blue => ⟨cur.1, cur.2.1, item.1⟩
+    | .red => ⟨item.1, cur.g, cur.b⟩
+    | .green => ⟨cur.r, item.1, cur.b⟩
+    | .blue => ⟨cur.r, cur.g, item.1⟩
 
-def getGame (s : String) : List (Nat × Nat × Nat) :=
-  (s.split (· == ';') |>.map String.trim).map getRound
+def parseGame : Parsec (List Triple) :=
+  (pstring "Game ") >> natNum >> pstring ": " >> sepBy parseRound (pstring "; ")
 
-def roundPossible (g : Nat × Nat × Nat) : Bool :=
-  g.1 ≤ 12 ∧ g.2.1 ≤ 13 ∧ g.2.2 ≤ 14
+def roundPossible (round : Triple) : Bool :=
+  round.r ≤ 12 ∧ round.g ≤ 13 ∧ round.b ≤ 14
 
-def gamePossible (g : List (Nat × Nat × Nat)) := Id.run do
-  for r in g do
-    if ¬(roundPossible r) then return false
+def gamePossible (game : List Triple) := Id.run do
+  for round in game do
+    if ¬(roundPossible round) then return false
   return true
 
 def firstPart (input : FilePath) : IO Nat := do
-  let rawdata := (← IO.FS.lines input).map fun s => (s.dropWhile (· != ':')).drop 2
-  let games := rawdata.map getGame
+  let rawdata := (← IO.FS.lines input)
+  let games := rawdata.map fun s => s.yoloParse parseGame
   let possibles := games.map gamePossible
   return possibles.data.foldlIdx (init := 0) fun idx sum cur => if cur then sum+idx+1 else sum
 
---#eval firstPart testinput
---#eval firstPart realinput  (Ans: 2776)
+--#eval firstPart testinput    --(ans : 8)
+--#eval firstPart realinput  --(ans: 2776)
 
 /-
 PART 2:
 -/
 
-def smallestPossibleRed (g : List (Nat × Nat × Nat)) : Nat :=
-  g.foldl (init := 0) fun min cur => if min < cur.1 then cur.1 else min
+instance : Max Triple where
+  max x y := ⟨max x.r y.r, max x.g y.g, max x.b y.b⟩
 
-def smallestPossibleGreen (g : List (Nat × Nat × Nat)) : Nat :=
-  g.foldl (init := 0) fun min cur => if min < cur.2.1 then cur.2.1 else min
-
-def smallestPossibleBlue (g : List (Nat × Nat × Nat)) : Nat :=
-  g.foldl (init := 0) fun min cur => if min < cur.2.2 then cur.2.2 else min
+def smallest (g : List Triple) : Triple :=
+  g.foldl (init := ⟨0,0,0⟩) max
 
 def secondPart (input : FilePath) : IO Nat := do
   let rawdata := (← IO.FS.lines input).map fun s => (s.dropWhile (· != ':')).drop 2
-  let games := rawdata.map getGame
-  let minRed := games.map smallestPossibleRed
-  let minGreen := games.map smallestPossibleGreen
-  let minBlue := games.map smallestPossibleBlue
-  let rg := minRed.zipWith minGreen (· * ·)
-  return (rg.zipWith minBlue (· * ·)).sum
+  let games := rawdata.map fun s => s.yoloParse parseGame
+  let smallests := games.map smallest
+  return smallests.foldl (init := 0) fun sum t => sum + t.r * t.g * t.b
 
---#eval secondPart testinput
---#eval secondPart realinput
+--#eval secondPart testinput  -- (ans: 2286)
+--#eval secondPart realinput   -- (ans: 68638)
 
 end Day02
