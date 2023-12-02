@@ -18,8 +18,8 @@ def firstPart (input : FilePath) : IO Nat := do
                     |>.map fun as => as[0]!.toNatDigit * 10 + as[as.size-1]!.toNatDigit
   return data.sum
 
---#eval first_part testinput
---#eval first_part realinput
+--#eval firstPart testinput   -- Correct answer: 142
+--#eval firstPart realinput   -- Correct answer: 54927
 
 /-
 PART 2:
@@ -61,12 +61,11 @@ def getFirstNumBackwards : Parsec Nat := fix fun p =>
 
 def secondPart (input : FilePath) : IO Nat := do
   let rawdata ← IO.FS.lines input
-  let firstDigits := rawdata.map fun s => s.yoloParse <| getFirstNum
-  let lastDigits := rawdata.map fun s => s.reverse.yoloParse <| getFirstNumBackwards
-  let lines := firstDigits.zipWith lastDigits fun a b => 10*a + b
-  return lines.sum
+  let firstDigits := rawdata.map fun s => s.yoloParse getFirstNum
+  let lastDigits := rawdata.map fun s => s.reverse.yoloParse getFirstNumBackwards
+  return firstDigits.zipWith lastDigits (10*· + ·) |>.sum
 
---#eval secondPart testinput2
---#eval secondPart realinput
+--#eval secondPart testinput2   -- Correct answer: 281
+--#eval secondPart realinput    -- Correct answer: 54581
 
 end Day01

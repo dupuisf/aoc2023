@@ -2,11 +2,11 @@ import Aoc2023.Utils
 
 open System
 
-namespace DayXX
+namespace Day03
 
-def testinput : FilePath := "/home/fred/lean/aoc2023/input_XX_test"
-def testinput2 : FilePath := "/home/fred/lean/aoc2023/input_XX_test2"
-def realinput : FilePath := "/home/fred/lean/aoc2023/input_XX"
+def testinput : FilePath := "/home/fred/lean/aoc2023/input_03_test"
+def testinput2 : FilePath := "/home/fred/lean/aoc2023/input_03_test2"
+def realinput : FilePath := "/home/fred/lean/aoc2023/input_03"
 
 /-
 PART 1:
@@ -30,4 +30,4 @@ def secondPart (input : FilePath) : IO Nat := do
 --#eval secondPart testinput
 --#eval secondPart realinput
 
-end DayXX
+end Day03
