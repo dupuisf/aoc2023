@@ -89,7 +89,7 @@ def reverse (s : String) : String :=
 def yoloParse [Inhabited α] (s : String) (p : Lean.Parsec α) : α :=
   match p s.iter with
   | Lean.Parsec.ParseResult.success _ x => x
-  | Lean.Parsec.ParseResult.error _ _ => panic! "YOLO!"
+  | Lean.Parsec.ParseResult.error _ _ => panic! "Parse error"
 
 def parse? [Inhabited α] (s : String) (p : Lean.Parsec α) : Option α :=
   match p s.iter with

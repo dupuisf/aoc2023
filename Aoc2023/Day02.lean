@@ -62,7 +62,7 @@ def gamePossible (game : List Triple) := Id.run do
   return true
 
 def firstPart (input : FilePath) : IO Nat := do
-  let rawdata := (← IO.FS.lines input)
+  let rawdata ← IO.FS.lines input
   let games := rawdata.map fun s => s.yoloParse parseGame
   let possibles := games.map gamePossible
   return possibles.data.foldlIdx (init := 0) fun idx sum cur => if cur then sum+idx+1 else sum
@@ -81,7 +81,7 @@ def smallest (g : List Triple) : Triple :=
   g.foldl (init := ⟨0,0,0⟩) max
 
 def secondPart (input : FilePath) : IO Nat := do
-  let rawdata := (← IO.FS.lines input).map fun s => (s.dropWhile (· != ':')).drop 2
+  let rawdata ← IO.FS.lines input
   let games := rawdata.map fun s => s.yoloParse parseGame
   let smallests := games.map smallest
   return smallests.foldl (init := 0) fun sum t => sum + t.r * t.g * t.b
