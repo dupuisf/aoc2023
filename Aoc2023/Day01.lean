@@ -53,20 +53,20 @@ def parseNumberBackwards : Parsec Nat :=
   <|> (do let _ ← pstring "eight".reverse; return 8)
   <|> (do let _ ← pstring "nine".reverse; return 9)
 
-partial def getFirstNum : Parsec Nat :=
-  parseNumberForwards <|> (do let _ ← anyChar; getFirstNum)
+def getFirstNum : Parsec Nat := fix fun p =>
+  parseNumberForwards <|> do let _ ← anyChar; p
 
-partial def getFirstNumBackwards : Parsec Nat :=
-  parseNumberBackwards <|> (do let _ ← anyChar; getFirstNumBackwards)
+def getFirstNumBackwards : Parsec Nat := fix fun p =>
+  parseNumberBackwards <|> do let _ ← anyChar; p
 
 def secondPart (input : FilePath) : IO Nat := do
   let rawdata ← IO.FS.lines input
-  let firstDigits := rawdata.map fun s => s.yoloParse getFirstNum
-  let lastDigits := rawdata.map fun s => s.reverse.yoloParse getFirstNumBackwards
+  let firstDigits := rawdata.map fun s => s.yoloParse <| getFirstNum
+  let lastDigits := rawdata.map fun s => s.reverse.yoloParse <| getFirstNumBackwards
   let lines := firstDigits.zipWith lastDigits fun a b => 10*a + b
   return lines.sum
 
---#eval second_part testinput2
---#eval second_part realinput
+--#eval secondPart testinput2
+--#eval secondPart realinput
 
 end Day01

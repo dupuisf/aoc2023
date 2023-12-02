@@ -174,6 +174,14 @@ end ArraySet
 
 namespace Lean.Parsec
 
+def fix (p : Parsec α → Parsec α) : Parsec α := fun it =>
+  let p' : Parsec α := fun it' =>
+    if it'.s.endPos - it'.i < it.s.endPos - it.i then
+      fix p it'
+    else
+      .error it' "recursive call going backwards in the string"
+  p p' it
+
 def natNum : Parsec Nat := do
   let some n := (← manyChars digit).toNat? | fail "Not a natural number"
   return n
