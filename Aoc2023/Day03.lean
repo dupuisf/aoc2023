@@ -21,7 +21,7 @@ structure Number where
 instance : ToString Number where
   toString n := s!"⟪{n.val}, {n.row}, ({n.start}, {n.stop})⟫"
 
-def printGrid (grid : Array (Array Char)) : IO Unit := do
+def printGrid (grid : Array₂ Char) : IO Unit := do
   for line in grid do
     IO.println (String.ofCharArray line)
 
@@ -29,7 +29,7 @@ def _root_.Char.isSymbol (c : Char) : Bool :=
   if c == '.' then false
   else if c.isDigit then false else true
 
-def checkIfNextToSymbol (g : Array (Array Char)) (n : Number) : Bool := Id.run do
+def checkIfNextToSymbol (g : Array₂ Char) (n : Number) : Bool := Id.run do
   -- row above
   for j in [n.start-1:n.stop+2] do
     if g[n.row-1]![j]!.isSymbol then return true
@@ -42,7 +42,7 @@ def checkIfNextToSymbol (g : Array (Array Char)) (n : Number) : Bool := Id.run d
   if g[n.row]![n.stop+1]!.isSymbol then return true
   return false
 
-def getNumbers (grid : Array (Array Char)) : Array Number := Id.run do
+def getNumbers (grid : Array₂ Char) : Array Number := Id.run do
   let w := grid[0]!.size
   let h:= grid.size
   let mut nums : Array Number := #[]
@@ -79,7 +79,7 @@ def firstPart (input : FilePath) : IO Nat := do
 PART 2:
 -/
 
-def findGearsNextDoor (g : Array (Array Char)) (n : Number) : Array (Nat × Nat) := Id.run do
+def findGearsNextDoor (g : Array₂ Char) (n : Number) : Array (Nat × Nat) := Id.run do
   let mut out : Array (Nat × Nat) := #[]
   -- row above
   for j in [n.start-1:n.stop+2] do
@@ -96,7 +96,7 @@ def findGearsNextDoor (g : Array (Array Char)) (n : Number) : Array (Nat × Nat)
 def secondPart (input : FilePath) : IO Nat := do
   let rawdata := (← IO.FS.lines input).map String.toCharArray
   let origwidth := rawdata[0]!.size
-  let padded1 := #[Array.mkArray origwidth '.'] ++ rawdata ++ #[Array.mkArray origwidth '.']
+  let padded1 := #[mkArray origwidth '.'] ++ rawdata ++ #[mkArray origwidth '.']
   let grid := padded1.map fun as => #['.'] ++ as ++ #['.']
   let nums := getNumbers grid
 
@@ -104,7 +104,7 @@ def secondPart (input : FilePath) : IO Nat := do
   let h := grid.size
   -- For every position, array of adjacent numbers if it's a gear
   -- Horribly inefficient but whatever
-  let mut gears : Array (Array (Array Nat)) := Array.mkArray h (Array.mkArray w #[])
+  let mut gears : Array₂ (Array Nat) := .mkArray₂ h w #[]
   for n in nums do
     let gs := findGearsNextDoor grid n
     for pos in gs do

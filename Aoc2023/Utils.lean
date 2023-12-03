@@ -13,6 +13,8 @@ end Char
 
 namespace Array
 
+notation "Array₂ " α => Array (Array α)
+
 def max [Inhabited α] [Max α] (a : Array α) : α :=
   if h : a.size = 0 then
     default
