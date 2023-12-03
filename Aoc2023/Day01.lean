@@ -29,35 +29,33 @@ open Lean Lean.Parsec
 
 def parseNumberForwards : Parsec Nat :=
   natDigit
-  <|> (do let _ ← pstring "zero"; return 0)
-  <|> (do let _ ← pstring "one"; return 1)
-  <|> (do let _ ← pstring "two"; return 2)
-  <|> (do let _ ← pstring "three"; return 3)
-  <|> (do let _ ← pstring "four"; return 4)
-  <|> (do let _ ← pstring "five"; return 5)
-  <|> (do let _ ← pstring "six"; return 6)
-  <|> (do let _ ← pstring "seven"; return 7)
-  <|> (do let _ ← pstring "eight"; return 8)
-  <|> (do let _ ← pstring "nine"; return 9)
+  <|> (pstring "zero" *> return 0)
+  <|> (pstring "one" *> return 1)
+  <|> (pstring "two" *> return 2)
+  <|> (pstring "three" *> return 3)
+  <|> (pstring "four" *> return 4)
+  <|> (pstring "five" *> return 5)
+  <|> (pstring "six" *> return 6)
+  <|> (pstring "seven" *> return 7)
+  <|> (pstring "eight" *> return 8)
+  <|> (pstring "nine" *> return 9)
 
 def parseNumberBackwards : Parsec Nat :=
   natDigit
-  <|> (do let _ ← pstring "zero".reverse; return 0)
-  <|> (do let _ ← pstring "one".reverse; return 1)
-  <|> (do let _ ← pstring "two".reverse; return 2)
-  <|> (do let _ ← pstring "three".reverse; return 3)
-  <|> (do let _ ← pstring "four".reverse; return 4)
-  <|> (do let _ ← pstring "five".reverse; return 5)
-  <|> (do let _ ← pstring "six".reverse; return 6)
-  <|> (do let _ ← pstring "seven".reverse; return 7)
-  <|> (do let _ ← pstring "eight".reverse; return 8)
-  <|> (do let _ ← pstring "nine".reverse; return 9)
+  <|> (pstring "zero".reverse *> return 0)
+  <|> (pstring "one".reverse *> return 1)
+  <|> (pstring "two".reverse *> return 2)
+  <|> (pstring "three".reverse *> return 3)
+  <|> (pstring "four".reverse *> return 4)
+  <|> (pstring "five".reverse *> return 5)
+  <|> (pstring "six".reverse *> return 6)
+  <|> (pstring "seven".reverse *> return 7)
+  <|> (pstring "eight".reverse *> return 8)
+  <|> (pstring "nine".reverse *> return 9)
 
-def getFirstNum : Parsec Nat := fix fun p =>
-  parseNumberForwards <|> do let _ ← anyChar; p
+def getFirstNum : Parsec Nat := fix fun p => parseNumberForwards <|> (anyChar *> p)
 
-def getFirstNumBackwards : Parsec Nat := fix fun p =>
-  parseNumberBackwards <|> do let _ ← anyChar; p
+def getFirstNumBackwards : Parsec Nat := fix fun p => parseNumberBackwards <|> (anyChar *> p)
 
 def secondPart (input : FilePath) : IO Nat := do
   let rawdata ← IO.FS.lines input

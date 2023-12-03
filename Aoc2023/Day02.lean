@@ -32,9 +32,9 @@ instance : ToString Triple where
   toString t := s!"⟪{t.r}, {t.g}, {t.b}⟫"
 
 def parseColor : Parsec Color :=
-  (do let _ ← pstring "red"; return .red)
-  <|> (do let _ ← pstring "green"; return .green)
-  <|> (do let _ ← pstring "blue"; return .blue)
+  (pstring "red" *> return .red)
+  <|> (pstring "green" *> return .green)
+  <|> (pstring "blue" *> return .blue)
 
 def parseItem : Parsec (Nat × Color) := do
   let num ← natNum
@@ -51,7 +51,7 @@ def parseRound : Parsec Triple := do
     | .blue => ⟨cur.r, cur.g, item.1⟩
 
 def parseGame : Parsec (List Triple) :=
-  (pstring "Game ") >> natNum >> pstring ": " >> sepBy parseRound (pstring "; ")
+  pstring "Game " *> natNum *> pstring ": " *> sepBy parseRound (pstring "; ")
 
 def roundPossible (round : Triple) : Bool :=
   round.r ≤ 12 ∧ round.g ≤ 13 ∧ round.b ≤ 14

@@ -174,14 +174,6 @@ end ArraySet
 
 namespace Lean.Parsec
 
-/-- Ignore the result of the first parser called -/
-@[inline] def andThen (p : Parsec α) (q : Unit → Parsec β) : Parsec β := do
-  let _ ← p
-  return (← q ())
-
-instance : HAndThen (Parsec α) (Parsec β) (Parsec β) where
-  hAndThen := Lean.Parsec.andThen
-
 def fix (p : Parsec α → Parsec α) : Parsec α := fun it =>
   let p' : Parsec α := fun it' =>
     if it'.s.endPos - it'.i < it.s.endPos - it.i then
@@ -198,7 +190,7 @@ def natDigit : Parsec Nat := return (← digit).toNatDigit
 
 def newlineChar : Parsec Unit := attempt do
   let c ← anyChar
-  if c == '\u000a' || c == '\u000a' then return () else fail s!"Newline not found"
+  if c == '\u000a' || c == '\u000a' then return () else fail "Newline not found"
 
 def eol : Parsec Unit := eof <|> (many1 newlineChar *> pure ())
 

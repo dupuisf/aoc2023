@@ -8,7 +8,7 @@ package «aoc2023» where
 lean_lib «Aoc2023» where
 
 @[default_target]
-lean_exe «aoc2023» where
+lean_exe aoc where
   root := `Main
   -- Enables the use of the Lean interpreter by the executable (e.g.,
   -- `runFrontend`) at the expense of increased binary size on Linux.
