@@ -198,11 +198,17 @@ def eol : Parsec Unit := eof <|> (many1 newlineChar *> pure ())
 
 partial def sepByCore (pcont : Parsec α) (psep : Parsec β) (acc : List α) :
   Parsec (List α) :=
-(do let _ ← psep; sepByCore pcont psep (acc ++ [←pcont])) <|> pure acc
+attempt (do let _ ← psep; sepByCore pcont psep (acc ++ [←pcont])) <|> pure acc
 
 def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
 (do Parsec.sepByCore pcont psep [←pcont]) <|> pure []
 
 def csv [Inhabited α] (p : Parsec α) : Parsec (List α) := sepBy p (do skipString ","; ws)
+
+/-- At least one space -/
+def whites : Parsec Unit := do
+  let _ ← (pchar ' ')
+  let _ ← manyChars (pchar ' ')
+  return ()
 
 end Lean.Parsec
