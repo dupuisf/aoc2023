@@ -48,10 +48,14 @@ def secondPart (input : FilePath) : IO Nat := do
   let intersections := parsed.map fun card => card.2.1.filter (card.2.2.contains ·)
   let numInter := intersections.map (·.length)
   let mut dups := mkArray numInter.size 1
-  for i in [0:numInter.size] do
-    for j in [i+1:i+1+numInter[i]!] do
-      if j < numInter.size then
-        dups := dups.set! j (dups[j]! + dups[i]!)
+  for hi : i in [0:numInter.size] do
+    for hj₁ : j in [i+1:i+1+numInter[i]'hi.2] do
+      if hj : j < dups.size then
+        have : i < dups.size := by
+          calc i ≤ i + 1 := Nat.le_succ _
+               _ ≤ j := hj₁.1
+               _ < dups.size := hj
+        dups := dups.set! j (dups[j] + dups[i])
   return dups.sum
 
 --#eval secondPart testinput   --(ans: 30)
