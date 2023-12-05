@@ -13,7 +13,7 @@ PART 1:
 -/
 
 
-def parseCard : Parsec (Nat × ((List Nat) × (List Nat))) := do
+def parseCard : Parsec (Nat × List Nat × List Nat) := do
   let _ ← pstring "Card"
   ws
   let n ← natNum
@@ -55,7 +55,7 @@ def secondPart (input : FilePath) : IO Nat := do
           calc i ≤ i + 1 := Nat.le_succ _
                _ ≤ j := hj₁.1
                _ < dups.size := hj
-        dups := dups.set! j (dups[j] + dups[i])
+        dups := dups.set ⟨j, hj⟩ (dups[j] + dups[i])
   return dups.sum
 
 --#eval secondPart testinput   --(ans: 30)
