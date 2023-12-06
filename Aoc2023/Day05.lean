@@ -40,8 +40,8 @@ def parseMap : Parsec Map := do
   let _ ← pstring "-to-"
   let _ ← manyChars asciiLetter
   let _ ← pstring " map:\n"
-  let entries ← sepBy parseMapEntry newlineChar
-  return ⟨entries⟩
+  let entries ← sepByA parseMapEntry newlineChar
+  return entries
 
 def parseMaps : Parsec (List Map) := sepBy parseMap (many newlineChar)
 
@@ -89,18 +89,6 @@ def firstPart (input : FilePath) : IO Int := do
 PART 2:
 -/
 
-def _root_.Array.last (as : Array α) : Option α := as[as.size-1]?
-
-def _root_.Array.maybePush (as : Array α) (a? : Option α) : Array α :=
-  match a? with
-  | none => as
-  | some x => as.push x
-
-def _root_.Array.keep? (as : Array α) (keep : α → α → α) : Option α :=
-  as.foldl (init := none) fun acc x => match acc with
-                                       | none => some x
-                                       | some z => some (keep z x)
-
 def parseSeedRanges : Parsec (List (Int × Int)) :=
   let numPair : Parsec (Int × Int) := do let n₁ ← natNum; ws; let n₂ ← natNum; return ⟨n₁, n₂⟩
   pstring "seeds: " *> sepBy numPair whites
@@ -145,17 +133,15 @@ def Map.mapRange (m : Map) (r : Int × Int) : Array (Int × Int) := Id.run do
 
 def allMaps (ms : List Map) (ranges : Array (Int × Int)) : Array (Int × Int) :=
   match ms with
-  | .nil => ranges
-  | .cons m rest =>
-      let newranges := ranges.concatMap m.mapRange
-      allMaps rest newranges
+  | [] => ranges
+  | m :: rest => allMaps rest (ranges.concatMap m.mapRange)
 
 def secondPart (input : FilePath) : IO Int := do
   let rawdata := (← IO.FS.readFile input)
   let some ⟨ranges, ms⟩ := rawdata.parse? parseInput₂ | panic! "parse error"
   let maps := ms.map Map.toNF
   let finalRanges := allMaps maps ranges.toArray
-  let some z := finalRanges.keep? fun x y => if x.1 < y.1 then x else y | panic! "Oh no"
+  let some z := finalRanges.best? fun x y => if x.1 < y.1 then x else y | panic! "Oh no"
   return z.1
 
 --#eval secondPart testinput   --(ans: 46)

@@ -67,6 +67,18 @@ def containsAny (as : Array α) (p : α → Bool) : Bool := Id.run do
     if p a then return true
   return false
 
+def last (as : Array α) : Option α := as[as.size-1]?
+
+def maybePush (as : Array α) (a? : Option α) : Array α :=
+  match a? with
+  | none => as
+  | some x => as.push x
+
+def best? (as : Array α) (keep : α → α → α) : Option α :=
+  as.foldl (init := none) fun acc x => match acc with
+                                       | none => some x
+                                       | some z => some (keep z x)
+
 def Pairwise (as : Array α) (r : α → α → Prop) :=
   ∀ i j : Nat, (hi : i < as.size) → (hj : j < as.size) → i ≠ j → r as[i] as[j]
 
@@ -202,6 +214,13 @@ attempt (do let _ ← psep; sepByCore pcont psep (acc ++ [←pcont])) <|> pure a
 
 def sepBy (pcont : Parsec α) (psep : Parsec β) : Parsec (List α) :=
 (do Parsec.sepByCore pcont psep [←pcont]) <|> pure []
+
+partial def sepByACore (pcont : Parsec α) (psep : Parsec β) (acc : Array α) :
+  Parsec (Array α) :=
+attempt (do let _ ← psep; sepByACore pcont psep (acc.push (←pcont))) <|> pure acc
+
+def sepByA (pcont : Parsec α) (psep : Parsec β) : Parsec (Array α) :=
+(do Parsec.sepByACore pcont psep #[←pcont]) <|> pure #[]
 
 def csv [Inhabited α] (p : Parsec α) : Parsec (List α) := sepBy p (do skipString ","; ws)
 
