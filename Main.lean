@@ -3,6 +3,7 @@ import Aoc2023.Day02
 import Aoc2023.Day03
 import Aoc2023.Day04
 import Aoc2023.Day05
+import Aoc2023.Day06
 
 def main (args : List String) : IO Unit :=
   match args with
@@ -30,6 +31,11 @@ def main (args : List String) : IO Unit :=
     IO.println "Day 5:"
     IO.println s!"Part 1: {← Day05.firstPart "input_05"}"
     IO.println s!"Part 2: {← Day05.secondPart "input_05"}"
+    IO.println ""
+  | ["6"] => do
+    IO.println "Day 6:"
+    IO.println s!"Part 1: {← Day06.firstPart "input_06"}"
+    IO.println s!"Part 2: {← Day06.secondPart "input_06"}"
     IO.println ""
   | _ => do
     IO.println "Help, what should I do!?"

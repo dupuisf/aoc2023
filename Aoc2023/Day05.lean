@@ -153,12 +153,8 @@ def allMaps (ms : List Map) (ranges : Array (Int × Int)) : Array (Int × Int) :
 def secondPart (input : FilePath) : IO Int := do
   let rawdata := (← IO.FS.readFile input)
   let some ⟨ranges, ms⟩ := rawdata.parse? parseInput₂ | panic! "parse error"
-  let msNF := ms.map Map.toNF
-  let maps := msNF
-  --let maps := msNF.take 7
+  let maps := ms.map Map.toNF
   let finalRanges := allMaps maps ranges.toArray
-  IO.println <| ms.get! 2
-  IO.println finalRanges
   let some z := finalRanges.keep? fun x y => if x.1 < y.1 then x else y | panic! "Oh no"
   return z.1
 
