@@ -110,8 +110,8 @@ def Nodup [DecidableEq α] (as : Array α) : Prop :=
 
 theorem size_empty : (#[] : Array α).size = 0 := List.length_nil
 
-partial def binSearchIdx [Inhabited α] (as : Array α) (k : α) (lt : α → α → Bool) (lo := 0) (hi := as.size - 1) :
-    Option Nat :=
+partial def binSearchIdx [Inhabited α] (as : Array α) (k : α) (lt : α → α → Bool)
+    (lo := 0) (hi := as.size - 1) : Option Nat :=
   let rec go lo hi :=
     if lo ≤ hi then
       let m := (lo + hi)/2
