@@ -79,6 +79,16 @@ def best? (as : Array α) (keep : α → α → α) : Option α :=
                                        | none => some x
                                        | some z => some (keep z x)
 
+def count (as : Array α) (p : α → Bool) : Nat :=
+  as.foldl (init := 0) fun acc x => if p x then acc + 1 else acc
+
+def natSet (as : Array α) (i : Nat) (v : α) (hi : i < as.size := by get_elem_tactic) : Array α :=
+  Array.set as ⟨i, hi⟩ v
+
+@[simp]
+theorem size_natSet (as : Array α) (i : Nat) (v : α) {hi : i < as.size} :
+    (as.natSet i v hi).size = as.size := Array.size_set _ _ _
+
 def Pairwise (as : Array α) (r : α → α → Prop) :=
   ∀ i j : Nat, (hi : i < as.size) → (hj : j < as.size) → i ≠ j → r as[i] as[j]
 
