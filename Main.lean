@@ -42,7 +42,7 @@ def main (args : List String) : IO Unit :=
   | ["7"] => do
     IO.println "Day 7:"
     IO.println s!"Part 1: {← Day07.firstPart "input_07"}"
-    --IO.println s!"Part 2: {← Day07.secondPart "input_07"}"
+    IO.println s!"Part 2: {← Day07part2.secondPart "input_07"}"
     IO.println ""
   | ["8"] => do
     IO.println "Day 8:"

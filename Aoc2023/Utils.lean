@@ -34,6 +34,9 @@ def filterWithIdx (as : Array α) (p : Nat → α → Bool) : Array α :=
     else
       (idx+1, r)
 
+def foldlIdx (as : Array α) (f : Nat → β → α → β) (init : β) : β :=
+  (as.foldl (β := β × Nat) (init := ⟨init, 0⟩) fun acc elem => ⟨f acc.2 acc.1 elem, acc.2 + 1⟩).1
+
 def mkArray₂ (m n : Nat) (v : α) : Array (Array α) :=
   Array.mkArray m (Array.mkArray n v)
 
@@ -88,6 +91,10 @@ def natSet (as : Array α) (i : Nat) (v : α) (hi : i < as.size := by get_elem_t
 @[simp]
 theorem size_natSet (as : Array α) (i : Nat) (v : α) {hi : i < as.size} :
     (as.natSet i v hi).size = as.size := Array.size_set _ _ _
+
+instance instGetElemSubtype {n : Nat} :
+    GetElem {as : Array α // as.size = n} Nat α fun _ i => LT.lt i n where
+  getElem xs i h := xs.val.get ⟨i, by simp only [xs.property, h]⟩
 
 def Pairwise (as : Array α) (r : α → α → Prop) :=
   ∀ i j : Nat, (hi : i < as.size) → (hj : j < as.size) → i ≠ j → r as[i] as[j]
