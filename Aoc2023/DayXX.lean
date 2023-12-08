@@ -1,6 +1,6 @@
 import Aoc2023.Utils
 
-open System
+open System Lean Lean.Parsec
 
 namespace DayXX
 
@@ -16,8 +16,8 @@ def firstPart (input : FilePath) : IO Nat := do
   let rawdata := (← IO.FS.lines input)
   return 0
 
---#eval firstPart testinput
---#eval firstPart realinput
+--#eval firstPart testinput           --(ans: )
+--#eval firstPart realinput           --(ans: )
 
 /-
 PART 2:
@@ -27,7 +27,7 @@ def secondPart (input : FilePath) : IO Nat := do
   let rawdata := (← IO.FS.lines input)
   return 0
 
---#eval secondPart testinput
---#eval secondPart realinput
+--#eval secondPart testinput           --(ans: )
+--#eval secondPart realinput           --(ans: )
 
 end DayXX
