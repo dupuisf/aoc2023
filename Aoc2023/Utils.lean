@@ -1,6 +1,7 @@
 import Lean.Data.Parsec
 import Std.Data.Nat.Lemmas
 import Std.Data.Array.Lemmas
+import Std.Data.BitVec.Basic
 import Init.Data.String.Basic
 import Aoc2023.AesopExtra
 
@@ -88,6 +89,9 @@ def count (as : Array α) (p : α → Bool) : Nat :=
 def natSet (as : Array α) (i : Nat) (v : α) (hi : i < as.size := by get_elem_tactic) : Array α :=
   Array.set as ⟨i, hi⟩ v
 
+def getAllIdx (as : Array α) (p : α → Bool) : Array Nat :=
+  as.foldlIdx (init := #[]) fun i ar elem => if p elem then ar.push i else ar
+
 @[simp]
 theorem size_natSet (as : Array α) (i : Nat) (v : α) {hi : i < as.size} :
     (as.natSet i v hi).size = as.size := Array.size_set _ _ _
@@ -105,6 +109,26 @@ def Nodup [DecidableEq α] (as : Array α) : Prop :=
 -- FOR STD
 
 theorem size_empty : (#[] : Array α).size = 0 := List.length_nil
+
+partial def binSearchIdx [Inhabited α] (as : Array α) (k : α) (lt : α → α → Bool) (lo := 0) (hi := as.size - 1) :
+    Option Nat :=
+  let rec go lo hi :=
+    if lo ≤ hi then
+      let m := (lo + hi)/2
+      let a := as[m]!
+      if lt a k then go (m+1) hi
+      else if lt k a then
+        if m == 0 then none
+        else
+          go lo (m-1)
+      else some m
+    else none
+  if lo < as.size then
+    let hi' := if hi < as.size then hi else as.size - 1
+    go lo hi'
+  else
+    none
+--termination_by go lo hi => hi - lo
 
 end Array
 
@@ -213,11 +237,21 @@ def fix (p : Parsec α → Parsec α) : Parsec α := fun it =>
       .error it' "recursive call going backwards in the string"
   p p' it
 
-def natNum : Parsec Nat := do
+@[inline]
+def natNum : Parsec Nat := attempt do
   let some n := (← manyChars digit).toNat? | fail "Not a natural number"
   return n
 
-def natDigit : Parsec Nat := return (← digit).toNatDigit
+@[inline]
+def natDigit : Parsec Nat := attempt do return (← digit).toNatDigit
+
+@[inline]
+def alphanum : Parsec Char := attempt do
+  let c ← anyChar
+  if '0' ≤ c ∧ c ≤ '9' then return c
+  if 'a' ≤ c ∧ c ≤ 'z' then return c
+  if 'A' ≤ c ∧ c ≤ 'Z' then return c
+  fail s!"alphanumeric character expected"
 
 def newlineChar : Parsec Unit := attempt do
   let c ← anyChar
@@ -248,3 +282,21 @@ def whites : Parsec Unit := do
   return ()
 
 end Lean.Parsec
+
+namespace Std.BitVec
+
+def foldls (v : BitVec n) (f : α → Bool → α) (init : α) : α :=
+  n.fold (init := init) fun i acc => f acc (v.getLsb i)
+
+def foldlsIdx (v : BitVec n) (f : Nat → α → Bool → α) (init : α) : α :=
+  n.fold (init := init) fun i acc => f i acc (v.getLsb i)
+
+def set (v : BitVec n) (i : Nat) (b : Bool) : BitVec n :=
+  let mask := (1 : BitVec n).shiftLeft i
+  if b then
+    v ||| mask
+  else
+    let mask' := BitVec.allOnes n ^^^ mask    -- Xor
+    v &&& mask'
+
+end Std.BitVec

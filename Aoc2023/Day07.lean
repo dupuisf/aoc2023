@@ -220,7 +220,7 @@ instance : DecidableRel (α := Card) (· < ·) :=
   inferInstanceAs (DecidableRel (α := Card) (·.val < ·.val))
 
 def Hand.stats (hand : Hand) : {as : Array Nat // as.size = 13} :=
-  hand.val.foldl (α := Card) (init := ⟨mkArray 13 0, by simp⟩)
+  hand.val.foldl (init := ⟨mkArray 13 0, by simp⟩)
     fun acc c =>
       have : c.val < acc.val.size := by
         calc (c : Nat) < 13  := by simp
