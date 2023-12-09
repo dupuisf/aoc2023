@@ -12,19 +12,32 @@ def realinput : FilePath := "/home/fred/lean/aoc2023/input_09"
 PART 1:
 -/
 
-def toDiffs : List Int → Int × List Int
-| [] => panic! "Not enough elements"
-| fst :: [] => ⟨fst, []⟩
-| fst :: rest =>
-  let ⟨snd, rest'⟩ := toDiffs rest
-  ⟨fst, (snd - fst) :: rest'⟩
+def toDiffs (as : List Int) (h : as ≠ []) : Int × List Int :=
+  match as with
+  | [] => False.elim (h rfl)
+  | fst :: [] => ⟨fst, []⟩
+  | head :: neck :: tail =>
+    let ⟨snd, rest'⟩ := toDiffs (neck :: tail) (by simp)
+    ⟨head, (snd - head) :: rest'⟩
 
-partial def toDiffSeq (as : List Int) : List Int :=
+theorem toDiffs_length_lt (as : List Int) (h : as ≠ []) : (toDiffs as h).2.length < as.length := by
+  match as with
+  | [] => exact False.elim (h rfl)
+  | _ :: [] => simp [toDiffs]
+  | head :: neck :: tail =>
+    simp [toDiffs]
+    refine Nat.succ_lt_succ ?_
+    calc _ < (neck :: tail).length := toDiffs_length_lt _ (by simp)
+         _ = tail.length + 1 := by simp
+
+def toDiffSeq (as : List Int) : List Int :=
   match as with
   | [] => []
   | head :: tail =>
-    let ⟨fst, diffs⟩ := toDiffs (head :: tail)
-    fst :: (toDiffSeq diffs)
+    let out := toDiffs (head :: tail) (by simp)
+    have : out.2.length < tail.length + 1 := toDiffs_length_lt _ _
+    out.1 :: (toDiffSeq out.2)
+termination_by toDiffSeq as => as.length
 
 def ofDiffs (fst : Int) (diffs : List Int) : List Int :=
   match diffs with
