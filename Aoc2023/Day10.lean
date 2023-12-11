@@ -74,9 +74,9 @@ partial def walk (grid : Array₂ Char) (pos : Nat × Nat) (fromDir : Direction)
   if (grid[newpos.1]![newpos.2]! == 'S') then return (clock + 1)
   else return walk grid newpos dir (clock + 1)
 
-def firstPart (input : FilePath) : IO Nat := do
+def firstPart (input : FilePath) : IO String := do
   let rawdata := (← IO.FS.lines input).map String.toCharArray
-  let some ⟨h_nonempty⟩ := checkThat rawdata fun as => 0 < as.size | panic! "No input"
+  let some ⟨h_nonempty⟩ := checkThat rawdata fun as => 0 < as.size | return "Error: no input"
   let origwidth := rawdata[0].size
   let padded1 := #[Array.mkArray origwidth '.'] ++ rawdata ++ #[Array.mkArray origwidth '.']
   let grid := padded1.map fun as => #['.'] ++ as ++ #['.']
@@ -87,9 +87,9 @@ def firstPart (input : FilePath) : IO Nat := do
   --let some ⟨hgrid⟩ :=
   --  grid.checkThatAll fun as => as.size = m | panic! "Rows not all the same size!"
 
-  let some startPos := grid.findIdx₂ (fun x => x == 'S') | panic! "Can't find starting point"
-  let startDir :: _ := possibleSteps grid startPos | panic! "No possible starting direction"
-  return (1 + (walk grid (startPos + startDir) startDir)) / 2
+  let some startPos := grid.findIdx₂ (fun x => x == 'S') | return "Can't find starting point"
+  let startDir :: _ := possibleSteps grid startPos | return "No possible starting direction"
+  return s!"{(1 + (walk grid (startPos + startDir) startDir)) / 2}"
 
 --#eval firstPart testinput           --(ans: 4)
 --#eval firstPart testinput2           --(ans: 8)
@@ -182,8 +182,8 @@ def secondPart (input : FilePath) : IO String := do
 
   let some startPos := grid.findIdx₂ (fun x => x == 'S') | panic! "Can't find starting point"
   let startDir :: _ := possibleSteps grid startPos true | panic! "No possible starting direction"
-  let some fixedGrid := walkFixGrid (grid.set₂ (startPos + startDir).1 (startPos + startDir).2 'M') (startPos + startDir + startDir) startDir
-    | panic! "couldn't fix grid"
+  let some fixedGrid := walkFixGrid (grid.set₂ (startPos + startDir).1 (startPos + startDir).2 'M')
+    (startPos + startDir + startDir) startDir | panic! "couldn't fix grid"
   let refixedGrid := fixedGrid.set₂ startPos.1 startPos.2 'M'
   --printGrid refixedGrid
   let count1 := dfs refixedGrid visited (startPos + Direction.n + Direction.w)

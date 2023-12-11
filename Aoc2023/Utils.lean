@@ -8,22 +8,13 @@ import Aoc2023.SetElem
 
 section general
 
-structure PropWrapper (p : Prop) where
-  pf : p
-
 def checkThat {α : Type _} (x : α) (p : α → Prop) [∀ a, Decidable (p a)] :
-    Option (PropWrapper (p x)) :=
+    Option (PLift (p x)) :=
   if h : p x then some ⟨h⟩
   else none
 
---def Array.checkThatAll {α : Type _} (xs : Array α) (p : α → Prop) [∀ a, Decidable (p a)] :
---    Option (Array (Subtype p)) :=
---  xs.foldlM (init := #[]) fun acc a => do
---    if h : p a then return acc.push (⟨a, h⟩)
---    else failure
-
 def Array.checkThatAll {α : Type _} (xs : Array α) (p : α → Prop) [∀ a, Decidable (p a)] :
-    Option (PropWrapper (∀ i, (h : i < xs.size) → p xs[i])) :=
+    Option (PLift (∀ i, (h : i < xs.size) → p xs[i])) :=
   match h : xs.all p with
   | false => none
   | true =>
@@ -34,7 +25,7 @@ def Array.checkThatAll {α : Type _} (xs : Array α) (p : α → Prop) [∀ a, D
 
 def Array.checkThatUpTo {α : Type _} (xs : Array α) (n : Nat) (hn : n ≤ xs.size) (p : α → Prop)
     [∀ a, Decidable (p a)] :
-    Option (PropWrapper (∀ i, (h : i < n) → p (xs[i]'(Nat.lt_of_lt_of_le h hn)))) :=
+    Option (PLift (∀ i, (h : i < n) → p (xs[i]'(Nat.lt_of_lt_of_le h hn)))) :=
   if hzero : xs.size = 0 then
     have hmain : ∀ i, (h : i < n) → p (xs[i]'(Nat.lt_of_lt_of_le h hn)) := by
       intro i hi
@@ -111,13 +102,19 @@ def foldtlM [Monad m] (f : β → α → m β) (init : β) (a : Array (Array α)
 def foldtl (f : β → α → β) (init : β) (a : Array (Array α)) : β :=
   a.foldl (fun x row => row.foldl f x) init
 
-def transpose [Inhabited α] (a : Array (Array α)) : Array (Array α) := Id.run do
-  let dim := a.size
-  let mut output : Array (Array α) := #[]
-  for i in [0:dim] do
-    let curCol := a.map (fun row => row[i]!)
-    output := output.push curCol
-  return output
+def transpose [Inhabited α] (as : Array₂ α) : Option (Array₂ α) := do
+  let dim := as.size
+  if hdim : dim ≤ 0 then
+    return #[]
+  else
+    have _ := Nat.lt_of_not_ge hdim
+    let width := as[0].size
+    let some ⟨_⟩ := as.checkThatAll fun row => row.size = width | failure
+    let mut output : Array₂ α := #[]
+    for i in [0:width] do
+      let curCol := as.map (fun row => row[i]!)
+      output := output.push curCol
+    return output
 
 def zipWith2D (a : Array (Array α)) (b : Array (Array β)) (f : α → β → γ) : Array (Array γ) :=
   a.zipWith b (fun ra rb => ra.zipWith rb f)
@@ -219,6 +216,21 @@ def findIdx₂ {α : Type _} [Inhabited α] (xs : Array₂ α) (p : α → Bool)
       if p xs[i]![j]! then
         return ⟨i, j⟩
   failure
+
+def findAllIdx {α : Type _} [Inhabited α] (xs : Array α) (p : α → Bool) :
+    Array Nat := Id.run do
+  xs.foldlIdx (init := #[]) fun idx acc x => if p x then acc.push idx else acc
+
+def findAllIdx₂ {α : Type _} [Inhabited α] (xs : Array₂ α) (p : α → Bool) :
+    Array (Nat × Nat) := Id.run do
+  let mut out := #[]
+  for hi : i in [:xs.size] do
+    have := hi.2
+    for hj : j in [:xs[i].size] do
+      have := hj.2
+      if p xs[i][j] then
+        out := out.push ⟨i, j⟩
+  return out
 
 end Array
 
@@ -390,3 +402,16 @@ def setPos (v : BitVec n) (i : Nat) (b : Bool) : BitVec n :=
     v &&& mask'
 
 end Std.BitVec
+
+-- ********
+-- * MISC *
+-- ********
+
+class Foldable (cont : Type u) (elem : Type v) where
+  fold : cont → (α → elem → α) → α → α
+
+export Foldable (fold)
+
+class Container (cont : Type u) (idx : Type v) (elem : outParam (Type w))
+    (dom : outParam (cont → idx → Prop))
+    [GetElem cont idx elem dom] [SetElem cont idx elem dom] [Foldable cont elem] where

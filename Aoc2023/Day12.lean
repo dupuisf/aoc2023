@@ -2,11 +2,11 @@ import Aoc2023.Utils
 
 open System Lean Lean.Parsec
 
-namespace DayXX
+namespace Day12
 
-def testinput1 : FilePath := "/home/fred/lean/aoc2023/input_XX_test1"
-def testinput2 : FilePath := "/home/fred/lean/aoc2023/input_XX_test2"
-def realinput : FilePath := "/home/fred/lean/aoc2023/input_XX"
+def testinput1 : FilePath := "/home/fred/lean/aoc2023/input_12_test1"
+def testinput2 : FilePath := "/home/fred/lean/aoc2023/input_12_test2"
+def realinput : FilePath := "/home/fred/lean/aoc2023/input_12"
 
 /-
 PART 1:
@@ -30,4 +30,4 @@ def secondPart (input : FilePath) : IO String := do
 --#eval secondPart testinput1           --(ans: )
 --#eval secondPart realinput           --(ans: )
 
-end DayXX
+end Day12
