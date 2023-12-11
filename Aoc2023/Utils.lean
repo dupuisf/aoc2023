@@ -4,6 +4,59 @@ import Std.Data.Array.Lemmas
 import Std.Data.BitVec.Basic
 import Init.Data.String.Basic
 import Aoc2023.AesopExtra
+import Aoc2023.SetElem
+
+section general
+
+structure PropWrapper (p : Prop) where
+  pf : p
+
+def checkThat {α : Type _} (x : α) (p : α → Prop) [∀ a, Decidable (p a)] :
+    Option (PropWrapper (p x)) :=
+  if h : p x then some ⟨h⟩
+  else none
+
+--def Array.checkThatAll {α : Type _} (xs : Array α) (p : α → Prop) [∀ a, Decidable (p a)] :
+--    Option (Array (Subtype p)) :=
+--  xs.foldlM (init := #[]) fun acc a => do
+--    if h : p a then return acc.push (⟨a, h⟩)
+--    else failure
+
+def Array.checkThatAll {α : Type _} (xs : Array α) (p : α → Prop) [∀ a, Decidable (p a)] :
+    Option (PropWrapper (∀ i, (h : i < xs.size) → p xs[i])) :=
+  match h : xs.all p with
+  | false => none
+  | true =>
+      have hmain : ∀ (i : Fin xs.size), p xs[i] := by
+        have htmp := (xs.all_eq_true _).mp h
+        simpa [decide_eq_true_iff] using htmp
+      some ⟨fun i hi => hmain ⟨i, hi⟩⟩
+
+def Array.checkThatUpTo {α : Type _} (xs : Array α) (n : Nat) (hn : n ≤ xs.size) (p : α → Prop)
+    [∀ a, Decidable (p a)] :
+    Option (PropWrapper (∀ i, (h : i < n) → p (xs[i]'(Nat.lt_of_lt_of_le h hn)))) :=
+  if hzero : xs.size = 0 then
+    have hmain : ∀ i, (h : i < n) → p (xs[i]'(Nat.lt_of_lt_of_le h hn)) := by
+      intro i hi
+      have : i < 0 := by
+        calc i < n := hi
+             _ ≤ xs.size := hn
+             _ = 0 := hzero
+      exact False.elim <| Nat.not_lt_zero i this
+    some ⟨hmain⟩
+  else
+    match h : xs.all p (start := 0) (stop := n) with
+    | false => none
+    | true =>
+        have hmain := by
+          have htmp := (xs.all_iff_forall _ 0 n).mp h
+          simpa [decide_eq_true_iff] using htmp
+        have hmain' (i : Nat) (hi : i < n) : p (xs[i]'(Nat.lt_of_lt_of_le hi hn)) := by
+          refine hmain ⟨i, Nat.lt_of_lt_of_le hi hn⟩ ?_
+          exact hi
+        some ⟨hmain'⟩
+
+end general
 
 namespace Char
 
@@ -12,9 +65,20 @@ def toNatDigit (c : Char) : Nat :=
 
 end Char
 
+
+abbrev Vec (n : Nat) (α : Type _) := { as : Array α // as.size = n }
+abbrev Vec₂ (n m : Nat) (α : Type _) := Vec n (Vec m α)
+
+instance instGetElemVec : GetElem (Vec n α) Nat α (fun _ i => i < n) where
+  getElem xs i h := Array.get xs ⟨i, by rwa [xs.property]⟩
+
+instance instGetElemVec₂ : GetElem (Vec₂ n m α) (Nat × Nat) α (fun _ i => i.1 < n ∧ i.2 < m) where
+  getElem xs i h := (xs[i.1]'h.1)[i.2]'h.2
+
 namespace Array
 
 notation "Array₂ " α => Array (Array α)
+
 
 def max [Inhabited α] [Max α] (a : Array α) : α :=
   if h : a.size = 0 then
@@ -106,6 +170,18 @@ def Pairwise (as : Array α) (r : α → α → Prop) :=
 def Nodup [DecidableEq α] (as : Array α) : Prop :=
   as.Pairwise (· ≠ ·)
 
+instance instSetElem : SetElem (Array α) Nat α (fun as i => i < as.size) where
+  setElem as i v h := as.set ⟨i, h⟩ v
+
+--instance instSetElem₂ : SetElem (Array₂ α) (Nat × Nat) α
+--    (fun as i => (h : i.1 < as.size) ∧ i.2 < (as.get ⟨i.1, h⟩).size) where
+--  setElem as i v h := as.set ⟨i, h⟩ v
+
+--instance instGetElem₂ : GetElem (Array₂ α) (Nat × Nat) α
+--    (fun as i => if h : i.1 < as.size then i.2 < (as.get ⟨i.1, h⟩).size else False) where
+--  getElem as i v h :=
+--    as.get ⟨i.1, by simp [h]⟩ v
+
 -- FOR STD
 
 theorem size_empty : (#[] : Array α).size = 0 := List.length_nil
@@ -129,6 +205,20 @@ partial def binSearchIdx [Inhabited α] (as : Array α) (k : α) (lt : α → α
   else
     none
 --termination_by go lo hi => hi - lo
+
+def pop? (as : Array α) : Option α :=
+  if h : as.size ≤ 0 then none
+  else
+    have : as.size - 1 < as.size := Nat.sub_one_lt_of_le (Nat.lt_of_not_le h) (Nat.le_refl _)
+    as[as.size - 1]
+
+def findIdx₂ {α : Type _} [Inhabited α] (xs : Array₂ α) (p : α → Bool) :
+    Option (Nat × Nat) := do
+  for i in [:xs.size] do
+    for j in [:xs[i]!.size] do
+      if p xs[i]![j]! then
+        return ⟨i, j⟩
+  failure
 
 end Array
 
@@ -291,7 +381,7 @@ def foldls (v : BitVec n) (f : α → Bool → α) (init : α) : α :=
 def foldlsIdx (v : BitVec n) (f : Nat → α → Bool → α) (init : α) : α :=
   n.fold (init := init) fun i acc => f i acc (v.getLsb i)
 
-def set (v : BitVec n) (i : Nat) (b : Bool) : BitVec n :=
+def setPos (v : BitVec n) (i : Nat) (b : Bool) : BitVec n :=
   let mask := (1 : BitVec n).shiftLeft i
   if b then
     v ||| mask

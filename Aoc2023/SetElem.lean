@@ -1,7 +1,8 @@
 /-! # SetElem class
 -/
 
-class SetElem (cont : Type u) (idx : Type v) (elem : outParam (Type w)) (dom : outParam (cont → idx → Prop)) where
+class SetElem (cont : Type u) (idx : Type v) (elem : outParam (Type w))
+    (dom : outParam (cont → idx → Prop)) where
   /--
   Like `GetElem.getElem` but for setting.
 
@@ -59,4 +60,3 @@ macro_rules
   | `(doElem| set $x:ident[$i,$is,*]'$h := $val) => `(doElem| set $x:ident[($i,$is,*)]'$h := $val)
   | `(doElem| set $x:ident[$i,$is,*]! := $val) => `(doElem| set $x:ident[($i,$is,*)]! := $val)
   | `(doElem| set $x:ident[$i,$is,*]? := $val) => `(doElem| set $x:ident[($i,$is,*)]? := $val)
-

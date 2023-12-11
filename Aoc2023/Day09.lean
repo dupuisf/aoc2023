@@ -1,6 +1,6 @@
 import Aoc2023.Utils
 
-open System Lean Lean.Parsec
+open System
 
 namespace Day09
 
@@ -25,32 +25,26 @@ theorem toDiffs_length_lt (as : List Int) (h : as ≠ []) : (toDiffs as h).2.len
   | [] => exact False.elim (h rfl)
   | _ :: [] => simp [toDiffs]
   | head :: neck :: tail =>
-    simp [toDiffs]
+    simp only [toDiffs]
     refine Nat.succ_lt_succ ?_
     calc _ < (neck :: tail).length := toDiffs_length_lt _ (by simp)
          _ = tail.length + 1 := by simp
 
-def toDiffSeq (as : List Int) : List Int :=
-  match as with
-  | [] => []
-  | head :: tail =>
-    let out := toDiffs (head :: tail) (by simp)
-    have : out.2.length < tail.length + 1 := toDiffs_length_lt _ _
-    out.1 :: (toDiffSeq out.2)
+def toDiffSeq : List Int → List Int
+| [] => []
+| head :: tail =>
+  let out := toDiffs (head :: tail) (by simp)
+  have : out.2.length < tail.length + 1 := toDiffs_length_lt _ _
+  out.1 :: (toDiffSeq out.2)
 termination_by toDiffSeq as => as.length
 
-def ofDiffs (fst : Int) (diffs : List Int) : List Int :=
-  match diffs with
-  | [] => [fst]
-  | head :: tail =>
-    let out := ofDiffs (fst + head) tail
-    fst :: out
+def ofDiffs (fst : Int) : List Int → List Int
+| [] => [fst]
+| head :: tail => fst :: (ofDiffs (fst + head) tail)
 
 def ofDiffSeq : List Int → List Int
 | [] => []
-| fst :: rest =>
-  let diffs := ofDiffSeq rest
-  ofDiffs fst diffs
+| fst :: rest => ofDiffs fst (ofDiffSeq rest)
 
 def extrapolate (as : List Int) : Int := Id.run do
   let some x := (ofDiffSeq ((toDiffSeq as) ++ [0])).getLast? | panic! "Oh no"
