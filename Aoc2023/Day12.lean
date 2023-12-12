@@ -39,27 +39,26 @@ def countArrangements (spr : Array Char) (nums : Array Nat) : Nat := Id.run do
   for i in [0:n] do
     if spr[i]! == '#' then break
     vals := vals.set₂ i 0 1
-  for i in [1:n] do
+  for hi : i in [1:n] do
     for j in [1:(k+1)] do
       let newval :=
-        match spr[i]! with
+        match spr[i] with
         | '.' => vals.get₂! (i-1) j
         | '#' =>
           let curSize := nums[j-1]!
           if canPlace curSize i spr then
-            vals.get₂! (i-nums[j-1]! - 1) (j-1)
+            vals.get₂! (i - curSize - 1) (j-1)
           else 0
         | '?' =>
           let curSize := nums[j-1]!
           let vdot := vals.get₂! (i-1) j
           let vhash :=
             if canPlace curSize i spr then
-              vals.get₂! (i- curSize - 1) (j-1)
+              vals.get₂! (i - curSize - 1) (j-1)
             else 0
           vdot + vhash
         | _ => panic!"weird character found"
       vals := vals.set₂ i j newval
-  --dbg_trace s!"{vals}"
   return vals[n-1]![k]!
 
 def firstPart (input : FilePath) : IO String := do
@@ -97,7 +96,7 @@ def secondPart (input : FilePath) : IO String := do
   let out : Array Nat := lines.map fun line => countArrangements line.1 line.2
   return s!"{out.sum}"
 
---#eval secondPart testinput1           --(ans: )
---#eval secondPart realinput           --(ans: )
+--#eval secondPart testinput1           --(ans: 525152)
+--#eval secondPart realinput           --(ans: 3476169006222)
 
 end Day12
