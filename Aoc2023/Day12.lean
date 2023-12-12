@@ -73,7 +73,7 @@ def canPlace (sz : Nat) (pos : Nat) (spr : Array Char) : Bool :=
 
 /-- Dynamic programming solution, based on the 2D array `vals[i][j]` which is supposed to contain
  the number of possible arrangements up to position `i` for the first `j` blocks (where 0 really
- means no object at all, not the first object, hence the `k+1` below). Note that we added
+ means no blocks at all, not the first block, hence the `k+1` below). Note that we added
  an extra `.` at the beginning to avoid out-of-bound errors when calling `canPlace`.
 
   The idea is that there are two kinds of arrangements: those for which the last block finishes
@@ -93,12 +93,14 @@ def countArrangements (spr : Array Char) (nums : Array Nat) : Nat := Id.run do
   let n := spr.size
   let k := nums.size
   let mut vals := Array.mkArray₂ n (k+1) 0
-  vals := vals.set₂ 0 0 1
-  /- Initialize the first row (i.e. no objects at all). There's only one arrangement
+
+  /- Initialize the first row (i.e. no blocks at all). There's only one arrangement
     until we hit the first `#`, after which it's zero. -/
   for i in [0:n] do
     if spr[i]! == '#' then break
     vals := vals.set₂ i 0 1
+
+  /- Main loop where we fill up the array using the recurrence relation: -/
   for hi : i in [1:n] do
     for j in [1:(k+1)] do
       let curSize := nums[j-1]!
@@ -108,6 +110,8 @@ def countArrangements (spr : Array Char) (nums : Array Nat) : Nat := Id.run do
       let vdot := if canBeDot spr[i] then vals.get₂! (i-1) j else 0
       /- Hence the total is the sum of the two kinds: -/
       vals := vals.set₂ i j (vhash + vdot)
+
+  /- Return the solution to the full problem, i.e. place all the blocks up to position `n-1`: -/
   return vals[n-1]![k]!
 
 def firstPart (input : FilePath) : IO String := do
