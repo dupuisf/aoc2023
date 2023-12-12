@@ -94,6 +94,8 @@ def countArrangements (spr : Array Char) (nums : Array Nat) : Nat := Id.run do
   let k := nums.size
   let mut vals := Array.mkArray₂ n (k+1) 0
   vals := vals.set₂ 0 0 1
+  /- Initialize the first row (i.e. no objects at all). There's only one arrangement
+    until we hit the first `#`, after which it's zero. -/
   for i in [0:n] do
     if spr[i]! == '#' then break
     vals := vals.set₂ i 0 1
