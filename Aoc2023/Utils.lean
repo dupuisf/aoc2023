@@ -6,6 +6,21 @@ import Init.Data.String.Basic
 import Aoc2023.AesopExtra
 import Aoc2023.SetElem
 
+notation "Array₂ " α => Array (Array α)
+
+theorem Membership.mem_upper {i a b step : Nat} (h : i ∈ (⟨a, b, step⟩ : Std.Range)) : i < b := h.2
+
+macro_rules
+| `(tactic|get_elem_tactic_trivial) => `(tactic|exact Membership.mem_upper ‹_›)
+
+namespace Nat
+
+@[aesop safe forward]
+theorem sub_one_lt_self {a : Nat} (ha : 0 < a) : a - 1 < a :=
+  sub_one_lt_of_le ha (Nat.le_refl _)
+
+end Nat
+
 section general
 
 def checkThat {α : Type _} (x : α) (p : α → Prop) [∀ a, Decidable (p a)] :
@@ -57,19 +72,33 @@ def toNatDigit (c : Char) : Nat :=
 end Char
 
 
-abbrev Vec (n : Nat) (α : Type _) := { as : Array α // as.size = n }
-abbrev Vec₂ (n m : Nat) (α : Type _) := Vec n (Vec m α)
+def Vec (n : Nat) (α : Type _) := { as : Array α // as.size = n }
+def Vec₂ (n m : Nat) (α : Type _) :=
+  { as : Array₂ α // as.size = n ∧ ∀ (i : Nat) (hi : i < as.size), as[i].size = m}
 
 instance instGetElemVec : GetElem (Vec n α) Nat α (fun _ i => i < n) where
-  getElem xs i h := Array.get xs ⟨i, by rwa [xs.property]⟩
+  getElem xs i h := Array.get xs.val ⟨i, by rwa [xs.property]⟩
 
 instance instGetElemVec₂ : GetElem (Vec₂ n m α) (Nat × Nat) α (fun _ i => i.1 < n ∧ i.2 < m) where
-  getElem xs i h := (xs[i.1]'h.1)[i.2]'h.2
+  getElem xs i h :=
+    have h₁ : i.1 < xs.val.size := by rw [xs.property.1]; exact h.1
+    have h₂ := h.2
+    have hmain : i.2 < xs.val[i.1].size := by rwa [xs.property.2 i.1 h₁]
+    xs.val[i.1][i.2]
 
 namespace Array
 
-notation "Array₂ " α => Array (Array α)
+def toVec (as : Array α) : Σ n : Nat, (Vec n α) :=
+  ⟨as.size, ⟨as, rfl⟩⟩
 
+def toVec₂ (as : Array₂ α) : Option (Σ (n : Nat × Nat), Vec₂ n.1 n.2 α) := do
+  if h : 0 < as.size then
+    let m := as[0].size
+    let n := as.size
+    let some ⟨hmain⟩ := as.checkThatAll (fun row => row.size = m) | failure
+    return ⟨⟨n, m⟩, as, ⟨rfl, hmain⟩⟩
+  else
+    failure
 
 def max [Inhabited α] [Max α] (a : Array α) : α :=
   if h : a.size = 0 then
@@ -132,7 +161,10 @@ def containsAny (as : Array α) (p : α → Bool) : Bool := Id.run do
     if p a then return true
   return false
 
-def last (as : Array α) : Option α := as[as.size-1]?
+def last? (as : Array α) : Option α := as[as.size-1]?
+
+def last (as : Array α) (h : 0 < as.size) : α :=
+  as[as.size-1]'(by aesop)
 
 def maybePush (as : Array α) (a? : Option α) : Array α :=
   match a? with
@@ -169,15 +201,6 @@ def Nodup [DecidableEq α] (as : Array α) : Prop :=
 
 instance instSetElem : SetElem (Array α) Nat α (fun as i => i < as.size) where
   setElem as i v h := as.set ⟨i, h⟩ v
-
---instance instSetElem₂ : SetElem (Array₂ α) (Nat × Nat) α
---    (fun as i => (h : i.1 < as.size) ∧ i.2 < (as.get ⟨i.1, h⟩).size) where
---  setElem as i v h := as.set ⟨i, h⟩ v
-
---instance instGetElem₂ : GetElem (Array₂ α) (Nat × Nat) α
---    (fun as i => if h : i.1 < as.size then i.2 < (as.get ⟨i.1, h⟩).size else False) where
---  getElem as i v h :=
---    as.get ⟨i.1, by simp [h]⟩ v
 
 -- FOR STD
 
@@ -232,7 +255,87 @@ def findAllIdx₂ {α : Type _} [Inhabited α] (xs : Array₂ α) (p : α → Bo
         out := out.push ⟨i, j⟩
   return out
 
+def addWallTopBottom (grid : Array₂ α) (x : α) : Array₂ α :=
+  if h : 0 < grid.size then
+    let topWidth := grid[0].size
+    let bottomWidth := (grid.last h).size
+    #[mkArray topWidth x] ++ grid ++ #[mkArray bottomWidth x]
+  else
+    #[]
+
+def addWallLeftRight (grid : Array₂ α) (x : α) : Array₂ α :=
+  grid.foldl (init := #[]) fun acc row => acc.push <| (#[x] ++ row).push x
+
+def addWall (grid : Array₂ α) (x : α) : Array₂ α :=
+  grid.addWallLeftRight x |>.addWallTopBottom x
+
 end Array
+
+namespace Vec
+
+def map {n : Nat} (xs : Vec n α) (f : α → β) : Vec n β :=
+  ⟨xs.val.map f, by rw [Array.size_map, xs.property]⟩
+
+def foldl (xs : Vec n α) (init : β) (f : β → α → β) : β := xs.val.foldl (init := init) f
+
+def range (n : Nat) : Vec n Nat where
+  val := Array.range n
+  property := Array.size_range
+
+--def foldlIdx (xs : Vec n α) (init : β) (f : Fin n → β → α → β) : β :=
+
+theorem size_val {xs : Vec n α} : xs.val.size = n := xs.property
+
+end Vec
+
+namespace Vec₂
+
+def ofVecVec (grid : Vec n (Vec m α)) : Vec₂ n m α where
+  val := grid.val.map (·.val)
+  property := by
+    refine ⟨?_, ?_⟩
+    · rw [Array.size_map, grid.property]
+    · intro i hi
+      rw [Array.getElem_map]
+      rw [Array.size_map, grid.property] at hi
+      exact grid[i].property
+
+def map {n m : Nat} (grid : Vec₂ n m α) (f : α → β) : Vec₂ n m β where
+  val := grid.val.map (·.map f)
+  property := by
+    refine ⟨?_, fun i hi => ?_⟩
+    · rw [Array.size_map, grid.property.1]
+    · rw [Array.size_map] at hi
+      rw [Array.getElem_map, Array.size_map]
+      exact grid.property.2 i hi
+
+def getRow (grid : Vec₂ n m α) (i : Nat) (hi : i < n) : Vec m α where
+  val :=
+    have hi' : i < grid.val.size := by rw [grid.property.1]; exact hi
+    grid.val[i]
+  property := grid.property.2 i _
+
+instance instGetElemNatVec₂ : GetElem (Vec₂ n m α) Nat (Vec m α) (fun _ i => i < n) where
+  getElem xs i hi := xs.getRow i hi
+
+def toArrayVec (grid : Vec₂ n m α) : Array (Vec m α) :=
+  grid.val.mapIdx fun ⟨i, hi⟩ _ => grid.getRow i (by rwa [← grid.property.1])
+
+theorem size_toArrayVec (grid : Vec₂ n m α) : grid.toArrayVec.size = n := by
+  rw [toArrayVec, Array.size_mapIdx, grid.property.1]
+
+def getCol (grid : Vec₂ n m α) (i : Nat) (hi : i < m) : Vec n α where
+  val := grid.val.mapIdx fun ⟨j, hj⟩ _ => (grid.getRow j (by rwa [← grid.property.1]))[i]
+  property := by rw [Array.size_mapIdx, grid.property.1]
+
+def transpose (grid : Vec₂ n m α) : Vec₂ m n α where
+  val :=
+    (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol j (by rwa [Array.size_range] at hj)).val
+  property := by
+    refine ⟨by rw [Array.size_mapIdx, Array.size_range], fun i hi => ?_⟩
+    rw [Array.getElem_mapIdx, Vec.size_val]
+
+end Vec₂
 
 namespace String
 

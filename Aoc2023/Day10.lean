@@ -77,9 +77,7 @@ partial def walk (grid : Array₂ Char) (pos : Nat × Nat) (fromDir : Direction)
 def firstPart (input : FilePath) : IO String := do
   let rawdata := (← IO.FS.lines input).map String.toCharArray
   let some ⟨h_nonempty⟩ := checkThat rawdata fun as => 0 < as.size | return "Error: no input"
-  let origwidth := rawdata[0].size
-  let padded1 := #[Array.mkArray origwidth '.'] ++ rawdata ++ #[Array.mkArray origwidth '.']
-  let grid := padded1.map fun as => #['.'] ++ as ++ #['.']
+  let grid := rawdata.addWall '.'
   --let n := grid.size
   --let some ⟨hn⟩ := checkThat n fun z => 0 < z | panic! "n = 0"
   --let m := grid[0].size

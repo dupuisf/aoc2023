@@ -126,7 +126,7 @@ def Map.toNF (m : Map) : Map := Id.run do
 -- Assumes NF
 def Map.mapRange (m : Map) (r : Int × Int) : Array (Int × Int) := Id.run do
   let preoutput := m.foldl (init := #[]) fun acc e => acc.maybePush (e.mapRange r)
-  let some lastElem := m.last | panic! "Oh no"
+  let some lastElem := m.last? | panic! "Oh no"
   let lastEntry : MapEntry :=
     ⟨lastElem.srcStart + lastElem.len, lastElem.srcStart + lastElem.len, r.1 + r.2 + 1⟩
   preoutput.maybePush (lastEntry.mapRange r)

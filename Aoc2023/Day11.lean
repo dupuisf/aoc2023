@@ -63,9 +63,10 @@ def secondPart (input : FilePath) : IO String := do
   let emptyCols := gridT.findAllIdx (fun row => row.all (· == '.'))
   let galaxies := grid.findAllIdx₂ (· == '#')
   let mut out := 0
-  for i in [1:galaxies.size] do
-    for j in [0:i] do
-      out := out + dist₂ emptyRows emptyCols galaxies[i]! galaxies[j]!
+  for hi : i in [1:galaxies.size] do
+    for hj : j in [0:i] do
+      have hj : j < galaxies.size := Nat.lt_trans (hj.2) hi.2
+      out := out + dist₂ emptyRows emptyCols galaxies[i] galaxies[j]
   return s!"{out}"
 
 --#eval secondPart testinput1           --(ans: 1030 with factor 10, 8410 with factor 100)
