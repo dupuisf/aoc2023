@@ -8,6 +8,18 @@ import Aoc2023.SetElem
 
 notation "Array₂ " α => Array (Array α)
 
+def Fin.addNat' (x : Fin n) (i : Nat) : Fin n where
+  val := (x + i) % n
+  isLt := by cases n with
+          | zero => exact Fin.elim0 x
+          | succ k => exact Nat.mod_lt _ <| Nat.zero_lt_succ _
+
+
+instance Fin.instHAddFin : HAdd (Fin n) Nat (Fin n) where
+  hAdd x y := ⟨(x + y) % n, by cases n with
+                            | zero => exact Fin.elim0 x
+                            | succ k => exact Nat.mod_lt _ <| Nat.zero_lt_succ _⟩
+
 theorem Membership.mem_upper {i a b step : Nat} (h : i ∈ (⟨a, b, step⟩ : Std.Range)) : i < b := h.2
 
 macro_rules
@@ -151,6 +163,9 @@ def zipWith2D (a : Array (Array α)) (b : Array (Array β)) (f : α → β → �
 def modify₂ (a : Array (Array α)) (i j : Nat) (f : α → α) : Array (Array α) :=
   a.modify i (·.modify j f)
 
+def get₂! [Inhabited α] (a : Array₂ α) (i j : Nat) : α :=
+  (a.get! i).get! j
+
 def set₂ (a : Array (Array α)) (i j : Nat) (x : α) : Array (Array α) :=
   a.modify i (·.modify j (fun _ => x))
 
@@ -273,6 +288,10 @@ end Array
 
 namespace Vec
 
+def empty : Vec 0 α where
+  val := #[]
+  property := by simp
+
 def map {n : Nat} (xs : Vec n α) (f : α → β) : Vec n β :=
   ⟨xs.val.map f, by rw [Array.size_map, xs.property]⟩
 
@@ -282,9 +301,22 @@ def range (n : Nat) : Vec n Nat where
   val := Array.range n
   property := Array.size_range
 
---def foldlIdx (xs : Vec n α) (init : β) (f : Fin n → β → α → β) : β :=
+def rangeFin (n : Nat) : Vec n (Fin n) where
+  val := (Array.range n).mapIdx fun i _ => ⟨i, by have := i.2; have h₂ := Array.size_range (n := n); simpa [h₂] using this⟩
+  property := by rw [Array.size_mapIdx, Array.size_range]
 
-theorem size_val {xs : Vec n α} : xs.val.size = n := xs.property
+def foldlIdx (xs : Vec n α) (init : β) (f : Fin n → β → α → β) : β :=
+  match n with
+  | 0 => init
+  | k+1 => (xs.foldl (β := β × (Fin (k+1))) (init := ⟨init, 0⟩) fun acc elem => ⟨f acc.2 acc.1 elem, acc.2 + 1⟩).1
+
+@[simp] theorem size_val {xs : Vec n α} : xs.val.size = n := xs.property
+
+def zipWith (as : Vec n α) (bs : Vec n β) (f : α → β → γ) : Vec n γ where
+  val := (Array.range n).mapIdx fun i _ => f as[i] bs[i]
+  property := by rw [Array.size_mapIdx, Array.size_range]
+
+def zip (as : Vec n α) (bs : Vec n β) : Vec n (α × β) := as.zipWith bs Prod.mk
 
 end Vec
 
@@ -321,6 +353,7 @@ instance instGetElemNatVec₂ : GetElem (Vec₂ n m α) Nat (Vec m α) (fun _ i 
 def toArrayVec (grid : Vec₂ n m α) : Array (Vec m α) :=
   grid.val.mapIdx fun ⟨i, hi⟩ _ => grid.getRow i (by rwa [← grid.property.1])
 
+@[simp]
 theorem size_toArrayVec (grid : Vec₂ n m α) : grid.toArrayVec.size = n := by
   rw [toArrayVec, Array.size_mapIdx, grid.property.1]
 
