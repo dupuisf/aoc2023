@@ -25,6 +25,8 @@ theorem Membership.mem_upper {i a b step : Nat} (h : i ∈ (⟨a, b, step⟩ : S
 macro_rules
 | `(tactic|get_elem_tactic_trivial) => `(tactic|exact Membership.mem_upper ‹_›)
 
+attribute [aesop safe forward] Nat.not_lt_zero
+
 namespace Nat
 
 @[aesop safe forward]
@@ -116,7 +118,10 @@ def toVec₂ (as : Array₂ α) : Option (Σ (n m : Nat), Vec₂ n m α) := do
     let some ⟨hmain⟩ := as.checkThatAll (fun row => row.size = m) | failure
     return ⟨n, m, as, ⟨rfl, hmain⟩⟩
   else
-    failure
+    return ⟨0, 0, #[], by
+      refine ⟨by simp, fun i hi => ?_⟩
+      simp at hi
+      aesop (add safe forward Nat.not_lt_zero)⟩
 
 def max [Inhabited α] [Max α] (a : Array α) : α :=
   if h : a.size = 0 then
@@ -291,7 +296,7 @@ def addWall (grid : Array₂ α) (x : α) : Array₂ α :=
   grid.addWallLeftRight x |>.addWallTopBottom x
 
 -- For std
-@[simp] theorem getElem_mkArray {n : Nat} {a : α} {i : Nat} (hi : i < n) :
+@[simp] theorem getElem_mkArray {n : Nat} {a : α} {i : Nat} {hi : i < n} :
     have : i < (mkArray n a).size := by simp [size_mkArray, hi]
     (mkArray n a)[i] = a := by
   simp only [mkArray, Array.getElem_eq_data_get, List.get_replicate]
@@ -344,7 +349,7 @@ def mkVec₂ (n m : Nat) (a : α) : Vec₂ n m α where
     refine ⟨by rw [Array.mkArray₂, Array.size_mkArray], ?_⟩
     intro i hi
     rw [Array.mkArray₂, Array.size_mkArray] at hi
-    simp only [Array.mkArray₂, Array.getElem_mkArray hi, Array.size_mkArray]
+    simp only [Array.mkArray₂, Array.getElem_mkArray (hi := hi), Array.size_mkArray]
 
 instance instInhabitedSigma [Inhabited α] : Inhabited (Σ n m, Vec₂ n m α) :=
   ⟨0, 0, empty⟩
@@ -383,6 +388,10 @@ def toArrayVec (grid : Vec₂ n m α) : Array (Vec m α) :=
 @[simp]
 theorem size_toArrayVec (grid : Vec₂ n m α) : grid.toArrayVec.size = n := by
   rw [toArrayVec, Array.size_mapIdx, grid.property.1]
+
+def toVecVec (grid : Vec₂ n m α) : Vec n (Vec m α) where
+  val := grid.toArrayVec
+  property := grid.size_toArrayVec
 
 def getCol (grid : Vec₂ n m α) (i : Nat) (hi : i < m) : Vec n α where
   val := grid.val.mapIdx fun ⟨j, hj⟩ _ => (grid.getRow j (by rwa [← grid.property.1]))[i]
