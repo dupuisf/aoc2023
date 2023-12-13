@@ -72,7 +72,7 @@ def canPlace (sz : Nat) (pos : Nat) (spr : Array Char) : Bool :=
             fun acc c => acc && canBeHash c
 
 /-- Dynamic programming solution, based on the 2D array `vals[i][j]` which is supposed to contain
- the number of possible arrangements up to position `i` for the first `j` blocks (where 0 really
+ the number of possible ways of arranging the first `j` blocks up to position `i` (where 0 really
  means no blocks at all, not the first block, hence the `k+1` below). Note that we added
  an extra `.` at the beginning to avoid out-of-bound errors when calling `canPlace`.
 

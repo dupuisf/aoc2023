@@ -91,24 +91,30 @@ def Vec₂ (n m : Nat) (α : Type _) :=
 instance instGetElemVec : GetElem (Vec n α) Nat α (fun _ i => i < n) where
   getElem xs i h := Array.get xs.val ⟨i, by rwa [xs.property]⟩
 
-instance instGetElemVec₂ : GetElem (Vec₂ n m α) (Nat × Nat) α (fun _ i => i.1 < n ∧ i.2 < m) where
-  getElem xs i h :=
-    have h₁ : i.1 < xs.val.size := by rw [xs.property.1]; exact h.1
-    have h₂ := h.2
-    have hmain : i.2 < xs.val[i.1].size := by rwa [xs.property.2 i.1 h₁]
-    xs.val[i.1][i.2]
+--instance instGetElemVec₂ : GetElem (Vec₂ n m α) (Nat × Nat) α (fun _ i => i.1 < n ∧ i.2 < m) where
+--  getElem xs i h :=
+--    have h₁ : i.1 < xs.val.size := by rw [xs.property.1]; exact h.1
+--    have h₂ := h.2
+--    have hmain : i.2 < xs.val[i.1].size := by rwa [xs.property.2 i.1 h₁]
+--    xs.val[i.1][i.2]
+
+instance instBEqVec [BEq α] : BEq (Vec n α) where
+  beq x y := x.val == y.val
+
+instance instInhabitedVec [Inhabited α] : Inhabited (Vec n α) :=
+  ⟨⟨Array.mkArray n default, by rw [Array.size_mkArray]⟩⟩
 
 namespace Array
 
 def toVec (as : Array α) : Σ n : Nat, (Vec n α) :=
   ⟨as.size, ⟨as, rfl⟩⟩
 
-def toVec₂ (as : Array₂ α) : Option (Σ (n : Nat × Nat), Vec₂ n.1 n.2 α) := do
+def toVec₂ (as : Array₂ α) : Option (Σ (n m : Nat), Vec₂ n m α) := do
   if h : 0 < as.size then
     let m := as[0].size
     let n := as.size
     let some ⟨hmain⟩ := as.checkThatAll (fun row => row.size = m) | failure
-    return ⟨⟨n, m⟩, as, ⟨rfl, hmain⟩⟩
+    return ⟨n, m, as, ⟨rfl, hmain⟩⟩
   else
     failure
 
@@ -284,6 +290,12 @@ def addWallLeftRight (grid : Array₂ α) (x : α) : Array₂ α :=
 def addWall (grid : Array₂ α) (x : α) : Array₂ α :=
   grid.addWallLeftRight x |>.addWallTopBottom x
 
+-- For std
+@[simp] theorem getElem_mkArray {n : Nat} {a : α} {i : Nat} (hi : i < n) :
+    have : i < (mkArray n a).size := by simp [size_mkArray, hi]
+    (mkArray n a)[i] = a := by
+  simp only [mkArray, Array.getElem_eq_data_get, List.get_replicate]
+
 end Array
 
 namespace Vec
@@ -321,6 +333,21 @@ def zip (as : Vec n α) (bs : Vec n β) : Vec n (α × β) := as.zipWith bs Prod
 end Vec
 
 namespace Vec₂
+
+def empty : Vec₂ 0 0 α where
+  val := #[]
+  property := ⟨by simp, fun i hi => by simp [Nat.not_lt_zero] at hi⟩
+
+def mkVec₂ (n m : Nat) (a : α) : Vec₂ n m α where
+  val := Array.mkArray₂ n m a
+  property := by
+    refine ⟨by rw [Array.mkArray₂, Array.size_mkArray], ?_⟩
+    intro i hi
+    rw [Array.mkArray₂, Array.size_mkArray] at hi
+    simp only [Array.mkArray₂, Array.getElem_mkArray hi, Array.size_mkArray]
+
+instance instInhabitedSigma [Inhabited α] : Inhabited (Σ n m, Vec₂ n m α) :=
+  ⟨0, 0, empty⟩
 
 def ofVecVec (grid : Vec n (Vec m α)) : Vec₂ n m α where
   val := grid.val.map (·.val)

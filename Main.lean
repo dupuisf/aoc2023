@@ -11,6 +11,7 @@ import Aoc2023.Day10
 import Aoc2023.Day11
 import Aoc2023.Day12
 import Aoc2023.Day13
+import Aoc2023.Day14
 
 def main (args : List String) : IO Unit :=
   match args with
@@ -98,6 +99,16 @@ def main (args : List String) : IO Unit :=
     IO.println "Day 13:"
     IO.println s!"Part 1: {← Day13.firstPart s!"input_13_test{s}"}"
     IO.println s!"Part 2: {← Day13.secondPart s!"input_13_test{s}"}"
+    IO.println ""
+  | ["14"] => do
+    IO.println "Day 14:"
+    IO.println s!"Part 1: {← Day14.firstPart "input_14"}"
+    IO.println s!"Part 2: {← Day14.secondPart "input_14"}"
+    IO.println ""
+  | ["14", s] => do
+    IO.println "Day 14:"
+    IO.println s!"Part 1: {← Day14.firstPart s!"input_14_test{s}"}"
+    IO.println s!"Part 2: {← Day14.secondPart s!"input_14_test{s}"}"
     IO.println ""
   | _ => do
     IO.println "Help, what should I do!?"
