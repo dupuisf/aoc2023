@@ -4,7 +4,7 @@ import Std.Data.Array.Lemmas
 import Std.Data.BitVec.Basic
 import Init.Data.String.Basic
 import Aoc2023.AesopExtra
-import Aoc2023.SetElem
+--import Aoc2023.SetElem
 
 notation "Array₂ " α => Array (Array α)
 
@@ -225,8 +225,8 @@ def Pairwise (as : Array α) (r : α → α → Prop) :=
 def Nodup [DecidableEq α] (as : Array α) : Prop :=
   as.Pairwise (· ≠ ·)
 
-instance instSetElem : SetElem (Array α) Nat α (fun as i => i < as.size) where
-  setElem as i v h := as.set ⟨i, h⟩ v
+--instance instSetElem : SetElem (Array α) Nat α (fun as i => i < as.size) where
+--  setElem as i v h := as.set ⟨i, h⟩ v
 
 -- FOR STD
 
@@ -335,9 +335,23 @@ def zipWith (as : Vec n α) (bs : Vec n β) (f : α → β → γ) : Vec n γ wh
 
 def zip (as : Vec n α) (bs : Vec n β) : Vec n (α × β) := as.zipWith bs Prod.mk
 
+def set! (as : Vec n α) (i : Nat) (a : α) :=
+  if h : i < n then
+    let h' : i < as.val.size := by rwa [size_val]
+    ⟨as.val.set ⟨i, h'⟩ a, by rw [Array.size_set, size_val]⟩
+  else
+    as
+
+def reverse (as : Vec n α) : Vec n α where
+  val := as.val.reverse
+  property := by rw [Array.size_reverse, as.property]
+
 end Vec
 
 namespace Vec₂
+
+instance instBEqVec₂ [BEq α] : BEq (Vec₂ n m α) where
+  beq x y := x.val == y.val
 
 def empty : Vec₂ 0 0 α where
   val := #[]
@@ -403,6 +417,26 @@ def transpose (grid : Vec₂ n m α) : Vec₂ m n α where
   property := by
     refine ⟨by rw [Array.size_mapIdx, Array.size_range], fun i hi => ?_⟩
     rw [Array.getElem_mapIdx, Vec.size_val]
+
+def set! (as : Vec₂ n m α) (i j : Nat) (a : α) :=
+  if hi : i < n then
+    if hj : j < m then
+      let hi' : i < as.val.size := by rwa [as.property.1]
+      let hj' : j < as.val[i].size := by rwa [as.property.2]
+      ⟨as.val.set ⟨i, hi'⟩ (as.val[i].set ⟨j, hj'⟩ a), by
+        refine ⟨?_, ?_⟩
+        rw [Array.size_set, as.property.1]
+        intro k hk
+        have hk' : k < as.val.size := by rwa [Array.size_set] at hk
+        rw [Array.get_set]
+        by_cases H : i = k <;> simp [H, as.property.2 k hk']
+        exact hk'⟩
+    else as
+  else as
+
+--def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
+--  val :=
+--    (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol j (by rwa [Array.size_range] at hj)).val
 
 end Vec₂
 
@@ -584,6 +618,6 @@ class Foldable (cont : Type u) (elem : Type v) where
 
 export Foldable (fold)
 
-class Container (cont : Type u) (idx : Type v) (elem : outParam (Type w))
-    (dom : outParam (cont → idx → Prop))
-    [GetElem cont idx elem dom] [SetElem cont idx elem dom] [Foldable cont elem] where
+--class Container (cont : Type u) (idx : Type v) (elem : outParam (Type w))
+--    (dom : outParam (cont → idx → Prop))
+--    [GetElem cont idx elem dom] [SetElem cont idx elem dom] [Foldable cont elem] where
