@@ -434,9 +434,22 @@ def set! (as : Vec₂ n m α) (i j : Nat) (a : α) :=
     else as
   else as
 
---def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
---  val :=
---    (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol j (by rwa [Array.size_range] at hj)).val
+def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
+  val :=
+    (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol j (by rwa [Array.size_range] at hj)).reverse.val
+  property := by
+    refine ⟨by rw [Array.size_mapIdx, Array.size_range], fun i hi => ?_⟩
+    rw [Array.getElem_mapIdx, Vec.size_val]
+
+def rotateCCW (grid : Vec₂ n m α) : Vec₂ m n α where
+  val :=
+    have : ∀ j, j < m → m - j - 1 < m := fun j hj => by
+      rw [Nat.sub_sub]
+      exact Nat.sub_lt_self (Nat.zero_lt_succ _) <| Nat.succ_le_of_lt hj
+    (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol (m-j-1) (this j (by rwa [Array.size_range] at hj))).reverse.val
+  property := by
+    refine ⟨by rw [Array.size_mapIdx, Array.size_range], fun i hi => ?_⟩
+    rw [Array.getElem_mapIdx, Vec.size_val]
 
 end Vec₂
 
