@@ -376,6 +376,9 @@ def mkVec₂ (n m : Nat) (a : α) : Vec₂ n m α where
 instance instInhabitedSigma [Inhabited α] : Inhabited (Σ n m, Vec₂ n m α) :=
   ⟨0, 0, empty⟩
 
+instance instInhabitedVec₂ [Inhabited α] : Inhabited (Vec₂ n m α) :=
+  ⟨mkVec₂ n m default⟩
+
 def ofVecVec (grid : Vec n (Vec m α)) : Vec₂ n m α where
   val := grid.val.map (·.val)
   property := by
@@ -394,6 +397,18 @@ def map {n m : Nat} (grid : Vec₂ n m α) (f : α → β) : Vec₂ n m β where
     · rw [Array.size_map] at hi
       rw [Array.getElem_map, Array.size_map]
       exact grid.property.2 i hi
+
+@[simp]
+theorem size_val (as : Vec₂ n m α) : as.val.size = n := by rw [as.property.1]
+
+@[simp]
+theorem size_val_get_fin (as : Vec₂ n m α) (i : Fin as.val.size) : as.val[i].size = m := by
+  simp [as.property.2]
+
+@[simp]
+theorem size_val_get (as : Vec₂ n m α) (i : Nat) {hi : i < n} :
+    (as.val[i]'(by simp [hi])).size = m := by
+  simp [as.property.2]
 
 def getRow (grid : Vec₂ n m α) (i : Nat) (hi : i < n) : Vec m α where
   val :=
@@ -426,6 +441,21 @@ def transpose (grid : Vec₂ n m α) : Vec₂ m n α where
     refine ⟨by rw [Array.size_mapIdx, Array.size_range], fun i hi => ?_⟩
     rw [Array.getElem_mapIdx, Vec.size_val]
 
+def set (as : Vec₂ n m α) (i : Fin n) (j : Fin m) (a : α) : Vec₂ n m α :=
+  let i' : Fin as.val.size := ⟨i, by simp [as.property.1]⟩
+  let j' : Fin as.val[i'].size := ⟨j, by simp⟩
+  ⟨as.val.set i' (as.val[i].set j' a), by
+    refine ⟨by simp, ?_⟩
+    intro k hk
+    simp at hk
+    rw [Array.get_set]
+    · split
+      case inl h =>
+        simp [Array.size_set]
+
+      case inr h => simp [as.property.2, hk]
+    · rwa [as.property.1]⟩
+
 def set! (as : Vec₂ n m α) (i j : Nat) (a : α) :=
   if hi : i < n then
     if hj : j < m then
@@ -441,6 +471,13 @@ def set! (as : Vec₂ n m α) (i j : Nat) (a : α) :=
         exact hk'⟩
     else as
   else as
+
+def getD (as : Vec₂ n m α) (i j : Nat) (d : α) : α :=
+  if h : i < n ∧ j < m then
+    have hi := h.1
+    have hj := h.2
+    as[i][j]
+  else d
 
 def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
   val :=
