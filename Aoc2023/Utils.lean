@@ -305,6 +305,10 @@ end Array
 
 namespace Vec
 
+def mkVec (n : Nat) (a : α) : Vec n α where
+  val := Array.mkArray n a
+  property := by rw [Array.size_mkArray]
+
 def empty : Vec 0 α where
   val := #[]
   property := by simp
@@ -334,6 +338,10 @@ def zipWith (as : Vec n α) (bs : Vec n β) (f : α → β → γ) : Vec n γ wh
   property := by rw [Array.size_mapIdx, Array.size_range]
 
 def zip (as : Vec n α) (bs : Vec n β) : Vec n (α × β) := as.zipWith bs Prod.mk
+
+def set (as : Vec n α) (i : Fin n) (a : α) : Vec n α :=
+  let i' : Fin as.val.size := ⟨i.val, by simp [as.property]⟩
+  ⟨as.val.set i' a, by rw [Array.size_set, size_val]⟩
 
 def set! (as : Vec n α) (i : Nat) (a : α) :=
   if h : i < n then
@@ -548,6 +556,13 @@ def insert (as : ArraySet α) (x : α) : ArraySet α :=
 
 end ArraySet
 
+namespace List
+
+def sum [Add α] [OfNat α 0] (as : List α) : α :=
+  as.foldl (init := 0) (· + ·)
+
+end List
+
 namespace Lean.Parsec
 
 def fix (p : Parsec α → Parsec α) : Parsec α := fun it =>
@@ -601,6 +616,10 @@ def whites : Parsec Unit := do
   let _ ← (pchar ' ')
   let _ ← manyChars (pchar ' ')
   return ()
+
+def anyCharThat (p : Char → Bool) : Parsec Char := attempt do
+  let c ← anyChar
+  if p c then return c else fail "Character doesn't satisfy p"
 
 end Lean.Parsec
 
