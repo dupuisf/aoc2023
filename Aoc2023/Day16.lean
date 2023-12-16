@@ -56,6 +56,14 @@ def Direction.vertbar : Direction → List Direction
 def Direction.dash : Direction → List Direction
 | .n => [.e, .w] | .w => [.w] | .e => [.e] | .s => [.e, .w]
 
+def Direction.next : Char → Direction → List Direction
+| '.', d => [d]
+| '/', d => [d.slash]
+| '\\', d => [d.backslash]
+| '-', d => d.dash
+| '|', d => d.vertbar
+| _, _ => []
+
 def setSeen (c : Bool × Bool × Bool × Bool) (dir : Direction) : Bool × Bool × Bool × Bool :=
   match dir with
   | .n => ⟨true, c.2.1, c.2.2.1, c.2.2.2⟩
@@ -95,31 +103,10 @@ partial def bfs (grid : Vec₂ n m Char) (seen : Vec₂ n m (Bool × Bool × Boo
       if getSeen seen[i]![j]! dir then bfs grid seen newq
       else
         let newseen := seen.set! i j (setSeen seen[i]![j]! dir)
-        match grid[i]![j]! with
-        | '.' =>
-            let (⟨i', j'⟩ : Nat × Nat) := (⟨i, j⟩ : Nat × Nat) + dir
-            let newq' := newq.enqueue ⟨i', j', dir⟩
-            bfs grid newseen newq'
-        | '/' =>
-            let (⟨i', j'⟩ : Nat × Nat) := (⟨i, j⟩ : Nat × Nat) + dir.slash
-            let newq' := newq.enqueue ⟨i', j', dir.slash⟩
-            bfs grid newseen newq'
-        | '\\' =>
-            let (⟨i', j'⟩ : Nat × Nat) := (⟨i, j⟩ : Nat × Nat) + dir.backslash
-            let newq' := newq.enqueue ⟨i', j', dir.backslash⟩
-            bfs grid newseen newq'
-        | '-' =>
-            let q' := dir.dash.foldl (init := newq) fun acc d =>
-              let (⟨i', j'⟩ : Nat × Nat) := (⟨i, j⟩ : Nat × Nat) + d
-              acc.enqueue ⟨i', j', d⟩
-            bfs grid newseen q'
-        | '|' =>
-            let q' := dir.vertbar.foldl (init := newq) fun acc d =>
-              let (⟨i', j'⟩ : Nat × Nat) := (⟨i, j⟩ : Nat × Nat) + d
-              acc.enqueue ⟨i', j', d⟩
-            bfs grid newseen q'
-        | '#' => bfs grid newseen newq
-        | _ => seen
+        let q' := (dir.next grid[i]![j]!).foldl (init := newq) fun acc d =>
+          let (⟨i', j'⟩ : Nat × Nat) := (⟨i, j⟩ : Nat × Nat) + d
+          acc.enqueue ⟨i', j', d⟩
+        bfs grid newseen q'
 
 def countEnergy (seen : Vec₂ n m (Bool × Bool × Bool × Bool)) : Nat := Id.run do
   let as := seen.val
@@ -148,7 +135,7 @@ def firstPart (input : FilePath) : IO String := do
 
 --#eval firstPart testinput1           --(ans: )
 --#eval debug1 testinput1           --(ans: )
---#eval firstPart realinput           --(ans: )
+--#eval firstPart realinput           --(ans: 8539)
 
 /-
 PART 2:
@@ -188,6 +175,6 @@ def secondPart (input : FilePath) : IO String := do
 
 --#eval secondPart testinput1           --(ans: )
 --#eval debug2 testinput1           --(ans: )
---#eval secondPart realinput           --(ans: )
+--#eval secondPart realinput           --(ans: 8674)
 
 end Day16
