@@ -499,6 +499,19 @@ def get? (as : Vec₂ n m α) (i j : Int) : Option α :=
     some as[i.toNat][j.toNat]
   else none
 
+def get'? (as : Vec₂ n m α) (pos : Int × Int) : Option α :=
+  let i := pos.1
+  let j := pos.2
+  if h : 0 ≤ i ∧ i < n ∧ 0 ≤ j ∧ j < m then
+    have hi : i.toNat < n := by
+      have := h.2.1
+      rwa [Int.toNat_lt h.1]
+    have hj : j.toNat < m := by
+      have := h.2.2.2
+      rwa [Int.toNat_lt h.2.2.1]
+    some as[i.toNat][j.toNat]
+  else none
+
 def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
   val :=
     (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol j (by rwa [Array.size_range] at hj)).reverse.val
