@@ -2,6 +2,7 @@ import Lean.Data.Parsec
 import Std.Data.Nat.Lemmas
 import Std.Data.Array.Lemmas
 import Std.Data.BitVec.Basic
+import Std.Data.Int.Lemmas
 import Init.Data.String.Basic
 import Aoc2023.AesopExtra
 --import Aoc2023.SetElem
@@ -350,6 +351,14 @@ def set! (as : Vec n α) (i : Nat) (a : α) :=
   else
     as
 
+def get? (as : Vec n α) (i : Int) : Option α :=
+  if h : 0 ≤ i ∧ i < n then
+    have hi : i.toNat < n := by
+      have := h.2
+      rwa [Int.toNat_lt h.1]
+    some as[i.toNat]
+  else none
+
 def reverse (as : Vec n α) : Vec n α where
   val := as.val.reverse
   property := by rw [Array.size_reverse, as.property]
@@ -478,6 +487,17 @@ def getD (as : Vec₂ n m α) (i j : Nat) (d : α) : α :=
     have hj := h.2
     as[i][j]
   else d
+
+def get? (as : Vec₂ n m α) (i j : Int) : Option α :=
+  if h : 0 ≤ i ∧ i < n ∧ 0 ≤ j ∧ j < m then
+    have hi : i.toNat < n := by
+      have := h.2.1
+      rwa [Int.toNat_lt h.1]
+    have hj : j.toNat < m := by
+      have := h.2.2.2
+      rwa [Int.toNat_lt h.2.2.1]
+    some as[i.toNat][j.toNat]
+  else none
 
 def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
   val :=

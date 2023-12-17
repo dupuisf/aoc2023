@@ -100,7 +100,8 @@ partial def bfs (grid : Vec₂ n m Char) (seen : Vec₂ n m (Bool × Bool × Boo
   match q.dequeue? with
   | none => seen
   | some ⟨⟨i, j, dir⟩, newq⟩ =>
-      if getSeen seen[i]![j]! dir then bfs grid seen newq
+      if getSeen seen[i]![j]! dir then
+        bfs grid seen newq
       else
         let newseen := seen.set! i j (setSeen seen[i]![j]! dir)
         let q' := (dir.next grid[i]![j]!).foldl (init := newq) fun acc d =>
