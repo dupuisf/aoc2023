@@ -681,6 +681,14 @@ def sepByA (pcont : Parsec α) (psep : Parsec β) : Parsec (Array α) :=
 
 def csv [Inhabited α] (p : Parsec α) : Parsec (List α) := sepBy p (do skipString ","; ws)
 
+def exactly (n : Nat) (p : Parsec α) : Parsec (Array α) := attempt do
+  match n with
+  | 0 => return #[]
+  | k+1 =>
+      let start ← exactly k p
+      let next ← p
+      return start.push next
+
 /-- At least one space -/
 def whites : Parsec Unit := do
   let _ ← (pchar ' ')
