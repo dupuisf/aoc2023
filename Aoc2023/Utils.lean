@@ -699,6 +699,10 @@ def anyCharThat (p : Char → Bool) : Parsec Char := attempt do
   let c ← anyChar
   if p c then return c else fail "Character doesn't satisfy p"
 
+def word : Parsec String := attempt do
+  let as ← many1 asciiLetter
+  return String.ofCharArray as
+
 end Lean.Parsec
 
 namespace Std.BitVec
