@@ -21,6 +21,7 @@ inductive ModuleType
 | broadcaster
 | conj
 | flipflop
+| rx
 deriving BEq, Repr, DecidableEq, Inhabited
 
 structure Module where
@@ -41,6 +42,7 @@ def parseModuleName : Parsec (String × ModuleType) :=
   (attempt do skipString "%"; let name ← word; return ⟨name, .flipflop⟩)
   <|> (attempt do skipString "&"; let name ← word; return ⟨name, .conj⟩)
   <|> (attempt do let name ← pstring "broadcaster"; return ⟨name, .broadcaster⟩)
+  <|> (attempt do let name ← word; return ⟨name, .rx⟩)
 
 def parseModule : Parsec (String × ModuleType × List String) := do
   let ⟨name, ty⟩ ← parseModuleName
@@ -54,6 +56,8 @@ structure Env where
   clockHi : Nat
   clockLo : Nat
   buttonsLeft : Nat
+  buttonClock : Nat
+  rxPulses : Nat
 
 abbrev PulseM := StateM Env
 
@@ -114,6 +118,10 @@ def handlePulse (p : Pulse) : PulseM Unit := do
       if !p.ty then
         flip p.dest
         sendPulse p.dest (!m.onOff) destlist
+  | .rx =>
+      if !p.ty then
+        let env ← get
+        set { env with rxPulses := env.rxPulses + 1 }
 
 def getButtonsLeft : PulseM Nat := do
   let env ← get
@@ -121,7 +129,7 @@ def getButtonsLeft : PulseM Nat := do
 
 def decButton : PulseM Unit := do
   let env ← get
-  set { env with buttonsLeft := env.buttonsLeft - 1 }
+  set { env with buttonsLeft := env.buttonsLeft - 1, buttonClock := env.buttonClock + 1 }
 
 partial def exec : PulseM Nat := do
   let curpulse ← popPulse
@@ -152,7 +160,6 @@ def firstPart (input : FilePath) : IO String := do
   let some moduleList := (← IO.FS.lines input).mapM (m := Option) (fun s => s.parse? parseModule)
     | return "Parse error"
   let parentsList : Array (String × List String) := moduleList.map (fun m => ⟨m.1, findParents m.1 moduleList⟩)
-  IO.println parentsList
   let parentsList' : Array (String × (Std.HashMap String Bool)) :=
     parentsList.map fun ⟨nm, pars⟩ => ⟨nm, Std.HashMap.ofList (pars.map fun s => (⟨s, false⟩ : String × Bool))⟩
   let parentsHashMap : Std.HashMap String (Std.HashMap String Bool) :=
@@ -165,21 +172,73 @@ def firstPart (input : FilePath) : IO String := do
       pulses := Std.Queue.empty
       clockHi := 0
       clockLo := 0
-      buttonsLeft := 1000 }
-  --let modules : Std.HashMap String Module :=
-  --  Std.HashMap.ofList <| moduleList.data.foldl (init := []) fun acc x => ⟨x.nm, x⟩ :: acc
+      buttonsLeft := 1000
+      buttonClock := 0
+      rxPulses := 0 }
   return s!"{PulseM.run initEnv}"
 
---#eval firstPart testinput1           --(ans: )
---#eval firstPart realinput           --(ans: )
+--#eval firstPart testinput1           --(ans: 32000000)
+--#eval firstPart realinput           --(ans: 925955316)
 
 /-
 PART 2:
 -/
 
+def getRxPulses : PulseM Nat := do
+  let env ← get
+  return env.rxPulses
+
+def resetRxPulses : PulseM Unit := do
+  let env ← get
+  set { env with rxPulses := 0 }
+
+def getButtonClock : PulseM Nat := do
+  let env ← get
+  return env.buttonClock
+
+partial def exec₂ : PulseM Nat := do
+  let curpulse ← popPulse
+  match curpulse with
+    | none =>
+        let rxCnt ← getRxPulses
+        if rxCnt = 1 then return (← getButtonClock)
+        else
+          match (← getButtonsLeft) with
+          | 0 => return 0
+          | _k+1 =>
+              decButton
+              resetRxPulses
+              sendPulse "broadcaster" false ["broadcaster"]
+              exec₂
+    | some p =>
+        handlePulse p
+        exec₂
+
+def PulseM.run₂ (env : Env) : Nat := StateT.run' exec₂ env
+
+
 def secondPart (input : FilePath) : IO String := do
-  let rawdata := (← IO.FS.lines input)
-  return s!"bla"
+  let some moduleList := (← IO.FS.lines input).mapM (m := Option) (fun s => s.parse? parseModule)
+    | return "Parse error"
+  let parentsList : Array (String × List String) :=
+    moduleList.map (fun m => ⟨m.1, findParents m.1 moduleList⟩)
+  let parentsList' : Array (String × (Std.HashMap String Bool)) :=
+    parentsList.map fun ⟨nm, pars⟩ =>
+      ⟨nm, Std.HashMap.ofList (pars.map fun s => (⟨s, false⟩ : String × Bool))⟩
+  let parentsHashMap : Std.HashMap String (Std.HashMap String Bool) :=
+    Std.HashMap.ofList parentsList'.data
+  let initModules : Array Module := moduleList.map
+    fun m => ⟨m.1, m.2.1, m.2.2, parentsHashMap.find! m.1, false⟩
+  let initModulesLst : List (String × Module) := initModules.data.map fun m => ⟨m.1, m⟩
+  let initEnv : Env :=
+    { modules := Std.HashMap.ofList initModulesLst
+      pulses := Std.Queue.empty
+      clockHi := 0
+      clockLo := 0
+      buttonsLeft := 1000000
+      buttonClock := 0
+      rxPulses := 0 }
+  return s!"{PulseM.run initEnv}"
 
 --#eval secondPart testinput1           --(ans: )
 --#eval secondPart realinput           --(ans: )

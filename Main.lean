@@ -146,5 +146,15 @@ def main (args : List String) : IO Unit :=
     IO.println s!"Part 1: {← Day20.firstPart s!"input_20"}"
     IO.println s!"Part 2: {← Day20.secondPart s!"input_20"}"
     IO.println ""
+  | ["20t"] => do
+    IO.println "Day 20:"
+    IO.println s!"Part 1: {← Day20.firstPart "input_20_test1"}"
+    IO.println s!"Part 2: {← Day20.secondPart "input_20_test1"}"
+    IO.println ""
+  | ["20t2"] => do
+    IO.println "Day 20:"
+    IO.println s!"Part 1: {← Day20.firstPart "input_20_test2"}"
+    IO.println s!"Part 2: {← Day20.secondPart "input_20_test2"}"
+    IO.println ""
   | _ => do
     IO.println "Help, what should I do!?"
