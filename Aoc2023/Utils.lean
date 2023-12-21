@@ -705,6 +705,13 @@ def word : Parsec String := attempt do
 
 end Lean.Parsec
 
+namespace Std.Queue
+
+def length (q : Std.Queue α) : Nat :=
+  q.eList.length + q.dList.length
+
+end Std.Queue
+
 namespace Std.BitVec
 
 def foldls (v : BitVec n) (f : α → Bool → α) (init : α) : α :=
