@@ -481,6 +481,10 @@ def set! (as : Vec₂ n m α) (i j : Nat) (a : α) :=
     else as
   else as
 
+def setInt (as : Vec₂ n m α) (pos : Int × Int) (a : α) :=
+  if 0 ≤ pos.1 ∧ 0 ≤ pos.2 then as.set! pos.1.toNat pos.2.toNat a
+  else as
+
 def getD (as : Vec₂ n m α) (i j : Nat) (d : α) : α :=
   if h : i < n ∧ j < m then
     have hi := h.1

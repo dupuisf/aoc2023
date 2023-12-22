@@ -28,6 +28,13 @@ def stepsDir (pos : Int × Int) (dir : Direction) (steps : Int) : Int × Int :=
   | .s => ⟨pos.1 + steps, pos.2⟩
   | .e => ⟨pos.1, pos.2 + steps⟩
 
+def stepsDir' (pos : Int × Int) (dir : Direction) (steps : Int) : Int × Int :=
+  match dir with
+  | .n => ⟨(pos.1 - steps) % 131, pos.2⟩
+  | .w => ⟨pos.1, (pos.2 - steps) % 131⟩
+  | .s => ⟨(pos.1 + steps) % 131, pos.2⟩
+  | .e => ⟨pos.1, (pos.2 + steps) % 131⟩
+
 def Direction.foldM {m : Type _ → Type _} [Monad m] (init : α) (f : α → Direction → m α) : m α := do
   let n ← f init .n
   let w ← f n .w
@@ -78,18 +85,17 @@ partial def bfs (fuel : Nat) : StateM (BFSState n m) (Vec₂ n m (Option Nat)) :
             | none => bfs (fuel-1)
             | some '#' =>
                 set { env with
-                      seen := env.seen.set! pos.1.toNat pos.2.toNat true,
+                      seen := env.seen.set! pos.1.toNat pos.2.toNat true
                       dists := env.dists.set! pos.1.toNat pos.2.toNat none }
                 bfs (fuel-1)
             | _ =>
-                set { env with
-                      seen := env.seen.set! pos.1.toNat pos.2.toNat true,
-                      dists := env.dists.set! pos.1.toNat pos.2.toNat curdist }
                 let newq :=
                   Direction.fold (init := env.q) fun acc dir =>
-                    acc.insert ⟨(stepsDir pos dir 1), curdist+1⟩
-                let env ← get
-                set { env with q := newq }
+                    acc.insert ⟨(stepsDir' pos dir 1), curdist+1⟩
+                set { env with
+                      seen := env.seen.set! pos.1.toNat pos.2.toNat true
+                      dists := env.dists.set! pos.1.toNat pos.2.toNat curdist
+                      q := newq }
                 bfs (fuel-1)
       else bfs (fuel-1)
 
@@ -103,6 +109,23 @@ def printGrid' [ToString α] (grid : Vec₂ n m α) : IO Unit := do
 
 def count (grid : Vec₂ n m α) (p : α → Bool) : Nat :=
   grid.val.foldtl (init := 0) fun acc c => if p c then acc+1 else acc
+
+def debug1 (input : FilePath) : IO String := do
+  let rawdata := (← IO.FS.lines input).map String.toCharArray
+  let some ⟨n, m, grid⟩ := rawdata.toVec₂ | return "Rows not all the same size"
+  let some start := grid.val.findIdx₂ (· == 'S') | return "Error"
+  let initEnv : BFSState n m :=
+    { grid := grid
+      seen := Vec₂.mkVec₂ n m false
+      --q := Std.BinomialHeap.empty.insert ⟨⟨(start.1 : Int), (start.2 : Int)⟩, 0⟩
+      q := Std.BinomialHeap.empty.insert ⟨⟨0, 0⟩, 0⟩
+      dists := Vec₂.mkVec₂ n m none,
+      curdist := 0 }
+  let finalGrid := (StateT.run (bfs 0) initEnv).2.grid
+  printGrid finalGrid
+  return s!"bla"
+
+#eval debug1 realinput
 
 def firstPart (input : FilePath) : IO String := do
   let rawdata := (← IO.FS.lines input).map String.toCharArray
@@ -169,22 +192,24 @@ def debug3 (input : FilePath) : IO String := do
   let rawdata := (← IO.FS.lines input).map String.toCharArray
   let some ⟨n, m, grid⟩ := rawdata.toVec₂ | return "Rows not all the same size"
   let some start := grid.val.findIdx₂ (· == 'S') | return "Error"
-  let bl := getDists grid ⟨n-1, 0⟩
+  let mid := getDists grid ⟨n/2, n/2⟩
+  --let bl := getDists grid ⟨n-1, 0⟩
   --let bm := getDists grid ⟨n-1, n/2⟩
   --let br := getDists grid ⟨n-1, m-1⟩
-  let l := getDists grid ⟨n/2, 0⟩
-  let r := getDists grid ⟨n/2, m-1⟩
-  let tl := getDists grid ⟨0, 0⟩
+  --let l := getDists grid ⟨n/2, 0⟩
+  --let r := getDists grid ⟨n/2, m-1⟩
+  --let tl := getDists grid ⟨0, 0⟩
   --let tm := getDists grid ⟨0, n/2⟩
   --let tr := getDists grid ⟨0, m-1⟩
-  IO.println s!"Bottom left: count = {count bl (f 327)}"
+  --IO.println s!"Bottom left: count = {count bl (f 327)}"
   --IO.println s!"Bottom middle: max dist = {count bm (f 196)}"
-  --IO.println s!"Bottom right: max dist = {count br (f 196)}"
+  --IO.println s!"Bottom right: max dist = {count br (f 65)}"
   --IO.println s!"Left: count = {count l (f (2*131))}"
   --IO.println s!"Right: count = {count r (f (2*131))}"
-  IO.println s!"Top left: max dist = {count tl (f 327)}"
+  --IO.println s!"Top left: max dist = {count tl (f 327)}"
   --IO.println s!"Top middle: max dist = {count tm (f 196)}"
-  --IO.println s!"Top right: max dist = {count tr (f 196)}"
+  --IO.println s!"Top right: max dist = {count tr (f 65)}"
+  IO.println s!"Middle: count = {count mid (f 65)}"
   return "bla"
 
 def debug4 (input : FilePath) : IO String := do
