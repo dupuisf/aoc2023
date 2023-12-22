@@ -140,11 +140,11 @@ partial def exec : PulseM Nat := do
         | _k+1 =>
             decButton
             sendPulse "broadcaster" false ["broadcaster"]
-            return (← exec)
+            exec
     | some p =>
         --dbg_trace s!"orig : {p.1}, dest : {p.2}, type : {p.3}"
         handlePulse p
-        return (← exec)
+        exec
 
 def PulseM.run (env : Env) : Nat := StateT.run' exec env
 
@@ -218,27 +218,28 @@ def PulseM.run₂ (env : Env) : Nat := StateT.run' exec₂ env
 
 
 def secondPart (input : FilePath) : IO String := do
-  let some moduleList := (← IO.FS.lines input).mapM (m := Option) (fun s => s.parse? parseModule)
-    | return "Parse error"
-  let parentsList : Array (String × List String) :=
-    moduleList.map (fun m => ⟨m.1, findParents m.1 moduleList⟩)
-  let parentsList' : Array (String × (Std.HashMap String Bool)) :=
-    parentsList.map fun ⟨nm, pars⟩ =>
-      ⟨nm, Std.HashMap.ofList (pars.map fun s => (⟨s, false⟩ : String × Bool))⟩
-  let parentsHashMap : Std.HashMap String (Std.HashMap String Bool) :=
-    Std.HashMap.ofList parentsList'.data
-  let initModules : Array Module := moduleList.map
-    fun m => ⟨m.1, m.2.1, m.2.2, parentsHashMap.find! m.1, false⟩
-  let initModulesLst : List (String × Module) := initModules.data.map fun m => ⟨m.1, m⟩
-  let initEnv : Env :=
-    { modules := Std.HashMap.ofList initModulesLst
-      pulses := Std.Queue.empty
-      clockHi := 0
-      clockLo := 0
-      buttonsLeft := 1000000
-      buttonClock := 0
-      rxPulses := 0 }
-  return s!"{PulseM.run initEnv}"
+  --let some moduleList := (← IO.FS.lines input).mapM (m := Option) (fun s => s.parse? parseModule)
+  --  | return "Parse error"
+  --let parentsList : Array (String × List String) :=
+  --  moduleList.map (fun m => ⟨m.1, findParents m.1 moduleList⟩)
+  --let parentsList' : Array (String × (Std.HashMap String Bool)) :=
+  --  parentsList.map fun ⟨nm, pars⟩ =>
+  --    ⟨nm, Std.HashMap.ofList (pars.map fun s => (⟨s, false⟩ : String × Bool))⟩
+  --let parentsHashMap : Std.HashMap String (Std.HashMap String Bool) :=
+  --  Std.HashMap.ofList parentsList'.data
+  --let initModules : Array Module := moduleList.map
+  --  fun m => ⟨m.1, m.2.1, m.2.2, parentsHashMap.find! m.1, false⟩
+  --let initModulesLst : List (String × Module) := initModules.data.map fun m => ⟨m.1, m⟩
+  --let initEnv : Env :=
+  --  { modules := Std.HashMap.ofList initModulesLst
+  --    pulses := Std.Queue.empty
+  --    clockHi := 0
+  --    clockLo := 0
+  --    buttonsLeft := 10000000
+  --    buttonClock := 0
+  --    rxPulses := 0 }
+  --return s!"{PulseM.run₂ initEnv}"
+  return "Not doing this one"
 
 --#eval secondPart testinput1           --(ans: )
 --#eval secondPart realinput           --(ans: )
