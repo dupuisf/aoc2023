@@ -146,10 +146,10 @@ def firstPart (input : FilePath) : IO String := do
 PART 2:
 -/
 
-def findNodes (grid : Vec₂ n m Char) : Std.RBMap Pos (List (Pos × Nat)) compare := Id.run do
-  let mut out : Std.RBMap Pos (List (Pos × Nat)) compare := Std.RBMap.empty
-  out := out.insert ⟨1,1⟩ []   -- start position
-  out := out.insert ⟨n-2, m-2⟩ []   -- target position
+def findNodes (grid : Vec₂ n m Char) : Std.RBSet Pos compare := Id.run do
+  let mut out : Std.RBSet Pos compare := Std.RBSet.empty
+  out := out.insert ⟨1,1⟩   -- start position
+  out := out.insert ⟨n-2, m-2⟩   -- target position
   for i in [1:n-1] do
     for j in [1:m-1] do
       let pos : Pos := ⟨i, j⟩
@@ -160,27 +160,17 @@ def findNodes (grid : Vec₂ n m Char) : Std.RBMap Pos (List (Pos × Nat)) compa
             dir :: acc
           else acc
       if opendirs.length > 2 then
-        out := out.insert pos []
+        out := out.insert pos
   return out
-
-def findNodesDebug (input : FilePath) : IO String := do
-  let some ⟨n, m, grid⟩ := (← IO.FS.lines input).map String.toCharArray
-                  |>.toVec₂  | return "Rows not all the same size"
-  let out := findNodes grid
-  --return s!"{grid.count (· == '.')}"
-  return s!"{out.toList}"
-
---#eval findNodesDebug testinput1
---#eval findNodesDebug realinput
 
 /-- Get the edge that starts at `start` in direction `dir`. Output `none` if that edge is
 disallowed, i.e. goes to the edge of the grid in the wrong direction, is a loop, or leads into
 a cul-de-sac. Meant to be started not on `start` but right next to it. -/
-partial def getEdge (grid : Vec₂ n m Char) (nodes : Std.RBMap Pos (List (Pos × Nat)) compare)
+partial def getEdge (grid : Vec₂ n m Char) (nodes : Std.RBSet Pos compare)
     (start cur : Pos) (prevdir : Direction) (dist := 1) : Option (Pos × Nat) :=
   match nodes.find? cur with
   | none =>
-      dbg_trace s!"here, cur = {cur}, prevdir = {prevdir}, dist = {dist}"
+      --dbg_trace s!"here, cur = {cur}, prevdir = {prevdir}, dist = {dist}"
       -- not there yet
       let opendirs : List Direction := Direction.fold (init := [])
         fun acc dir =>
@@ -203,100 +193,71 @@ partial def getEdge (grid : Vec₂ n m Char) (nodes : Std.RBMap Pos (List (Pos �
       else
         some ⟨cur, dist⟩
 
-def getEdgeDebug (input : FilePath) : IO String := do
-  let some ⟨n, m, grid⟩ := (← IO.FS.lines input).map String.toCharArray
-                  |>.toVec₂  | return "Rows not all the same size"
-  let nodes := findNodes grid
-  --let out := getEdge grid nodes ⟨3, 11⟩ ⟨3, 12⟩ .e
-  let out := getEdge grid nodes ⟨11, 21⟩ ⟨10, 21⟩ .n
-  --return s!"{grid.count (· == '.')}"
-  return s!"{out}"
+def getEdges (grid : Vec₂ n m Char) (nodes : Std.RBSet Pos compare) :
+    Std.RBMap Pos (List (Pos × Nat)) compare :=
+  nodes.foldl (init := Std.RBMap.empty) fun rbmap pos =>
+    let startpoints : List (Pos × Direction) :=
+      Direction.fold (init := []) fun acc dir =>
+        let newpos := pos + dir
+        if grid.get'! ⟨newpos.y, newpos.x⟩ != '#' then
+          ⟨newpos, dir⟩ :: acc
+        else acc
+    let edges : List (Pos × Nat) := startpoints.foldl (init := []) fun acc startpoint =>
+      let edge := getEdge grid nodes pos startpoint.1 startpoint.2
+      match edge with
+      | none => acc
+      | some x => x :: acc
+    rbmap.insert pos edges
 
-#eval getEdgeDebug testinput1
---#eval getEdgeDebug realinput
-
-
-structure GraphNode where
-  pos : Pos
-  neighbors : List (Nat × Nat)  -- ⟨index of neighbor, dist⟩
-deriving BEq, Repr, Inhabited
-
-structure GraphBuilderState (n m : Nat) where
-  grid : Vec₂ n m Char
-  curgraph : Array GraphNode
-  lastnode : Nat   -- index in curgraph
-  seen : Std.RBSet Pos compare
+structure GraphState where
+  graph : Std.RBMap Pos (List (Pos × Nat)) compare
+  best : Nat
   target : Pos
-  /-- none => bidirectional, false => backwards only, true => forwards only -/
-  forwardsOnly : Option Bool
-  /-- Distance seen so far in this edge -/
-  edgeDist : Nat
-  q : Std.Queue Pos
+  q : Std.Queue (Pos × Nat × Std.RBSet Pos compare)
 deriving Inhabited
 
-def popQueue₂ : StateM (GraphBuilderState n m) (Option Pos) := do
+def popQueue₂ : StateM GraphState (Option (Pos × Nat × Std.RBSet Pos compare)) := do
   let env ← get
   match env.q.dequeue? with
   | none => return none
-  | some ⟨pos, q'⟩ =>
+  | some ⟨⟨pos, dist, path⟩, q'⟩ =>
       set { env with q := q' }
-      return some pos
+      return some ⟨pos, dist, path⟩
 
-def makeNode : StateM (GraphBuilderState n m) Unit := do
-  sorry
-
-partial def buildGraph : StateM (GraphBuilderState n m) (Array GraphNode) := do
+partial def search₂ : StateM GraphState Nat := do
   match (← popQueue₂) with
-  | none => return (← get).curgraph
-  | some pos =>
+  | none => return (← get).best
+  | some ⟨pos, dist, path⟩ =>
       let e ← get
       if pos = e.target then
-        makeNode
-        buildGraph
+        if dist > e.best then
+          set { e with best := dist }
+        search₂
       else
-        let opendirs : List Direction := Direction.fold (init := [])
-          fun acc dir =>
-            let newpos := pos + dir
-            if (e.grid.get'! ⟨newpos.y, newpos.x⟩ != '#') ∧ !(e.seen.find? newpos).isSome then
-              dir :: acc
-            else acc
-        match opendirs with
-        | [] => buildGraph
-        | [dir] =>
-            let newseen := e.seen.insert pos
-            if pos.x = 1 ∧ dir = .n then set { e with forwardsOnly := some false }
-            else if pos.x = 1 ∧ dir = .s then set { e with forwardsOnly := some true }
-            else if pos.x = m-2 ∧ dir = .n then set { e with forwardsOnly := some false }
-            else if pos.x = m-2 ∧ dir = .s then set { e with forwardsOnly := some true }
-            else if pos.y = 1 ∧ dir = .w then set { e with forwardsOnly := some false }
-            else if pos.y = 1 ∧ dir = .e then set { e with forwardsOnly := some true }
-            else if pos.y = 1 ∧ dir = .w then set { e with forwardsOnly := some false }
-            else if pos.y = 1 ∧ dir = .e then set { e with forwardsOnly := some true }
-            else if pos.y = n-2 ∧ dir = .w then set { e with forwardsOnly := some false }
-            else if pos.y = n-2 ∧ dir = .e then set { e with forwardsOnly := some true }
-            set { e with seen := newseen, q := e.q.enqueue (pos + dir) }
-            buildGraph
-        | dirs =>
-            sorry
-
-
+        match path.find? pos with
+        | none =>
+            let edges := e.graph.find! pos
+            let newq := edges.foldl (init := e.q) fun qacc edge =>
+              qacc.enqueue ⟨edge.1, dist + edge.2, path.insert pos⟩
+            set { e with q := newq }
+            search₂
+        | some _ => search₂
 
 def secondPart (input : FilePath) : IO String := do
   let some ⟨n, m, grid⟩ := (← IO.FS.lines input).map String.toCharArray
                   |>.toVec₂  | return "Rows not all the same size"
-  let initst : BFSState n m :=
-    { grid := grid
+  let nodes := findNodes grid
+  let graph := getEdges grid nodes
+  let initst : GraphState :=
+    { graph := graph
       best := 0
-      target := ⟨n-1, m-2⟩
-      q := Std.Queue.empty.enqueue ⟨⟨0, 1⟩, Std.RBSet.empty⟩}
-  let out := StateT.run' (m := Id) search initst
-  --return s!"{grid.count (· == '.')}"
+      target := ⟨n-2, m-2⟩
+      q := Std.Queue.empty.enqueue ⟨⟨1, 1⟩, 2, Std.RBSet.empty⟩}
+  let out := StateT.run' (m := Id) search₂ initst
   return s!"{out}"
 
---#eval secondPart testinput1           --(ans: )
---#eval secondPart realinput           --(ans: )
+--#eval secondPart testinput1           --(ans: 154)
+--#eval secondPart realinput           --(ans: 6302)
 
-
--- 9280 '.' tiles
 
 end Day23
