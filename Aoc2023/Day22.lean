@@ -198,7 +198,7 @@ partial def bfs (fuel := 0) (start := true) : StateM BFSState (Array Bool) := do
           e.supported[idx]!.foldl (init := []) fun acc i => ⟨i, e.bricks[i]!⟩ :: acc
         set { e with
               falling := e.falling.set! idx true
-              q := enqueued.foldl (init := e.q) fun acc elem => acc.insert elem }
+              q := e.q.insertAll enqueued }
         bfs (fuel - 1) false
       else bfs (fuel-1) false
 

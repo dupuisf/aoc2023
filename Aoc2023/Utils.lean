@@ -516,6 +516,22 @@ def get'? (as : Vec₂ n m α) (pos : Int × Int) : Option α :=
     some as[i.toNat][j.toNat]
   else none
 
+def get'! [Inhabited α] (as : Vec₂ n m α) (pos : Int × Int) : α :=
+  let i := pos.1
+  let j := pos.2
+  if h : 0 ≤ i ∧ i < n ∧ 0 ≤ j ∧ j < m then
+    have hi : i.toNat < n := by
+      have := h.2.1
+      rwa [Int.toNat_lt h.1]
+    have hj : j.toNat < m := by
+      have := h.2.2.2
+      rwa [Int.toNat_lt h.2.2.1]
+    as[i.toNat][j.toNat]
+  else panic! "WTF"
+
+def count (as : Vec₂ n m α) (p : α → Bool) : Nat :=
+  as.val.foldl (init := 0) fun acc row => acc + row.count p
+
 def rotateCW (grid : Vec₂ n m α) : Vec₂ m n α where
   val :=
     (Array.range m).mapIdx fun ⟨j, hj⟩ _ => (grid.getCol j (by rwa [Array.size_range] at hj)).reverse.val
@@ -636,6 +652,14 @@ def sum [Add α] [OfNat α 0] (as : List α) : α :=
   as.foldl (init := 0) (· + ·)
 
 end List
+
+namespace Std.BinomialHeap
+
+def insertAll (q : Std.BinomialHeap α le) (as : List α) : Std.BinomialHeap α le :=
+  as.foldl (init := q) fun acc x => acc.insert x
+
+end Std.BinomialHeap
+
 
 namespace Lean.Parsec
 

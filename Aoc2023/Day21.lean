@@ -7,6 +7,7 @@ namespace Day21
 def testinput1 : FilePath := "/home/fred/lean/aoc2023/input_21_test1"
 def testinput2 : FilePath := "/home/fred/lean/aoc2023/input_21_test2"
 def realinput : FilePath := "/home/fred/lean/aoc2023/input_21"
+def biginput : FilePath := "/home/fred/lean/aoc2023/input_21_big"
 
 /-
 PART 1:
@@ -93,6 +94,7 @@ partial def bfs (fuel : Nat) : StateM (BFSState n m) (Vec₂ n m (Option Nat)) :
                   Direction.fold (init := env.q) fun acc dir =>
                     acc.insert ⟨(stepsDir' pos dir 1), curdist+1⟩
                 set { env with
+                      --grid := if curdist ≤ 65 then env.grid.setInt pos 'O' else env.grid
                       seen := env.seen.set! pos.1.toNat pos.2.toNat true
                       dists := env.dists.set! pos.1.toNat pos.2.toNat curdist
                       q := newq }
@@ -118,14 +120,14 @@ def debug1 (input : FilePath) : IO String := do
     { grid := grid
       seen := Vec₂.mkVec₂ n m false
       --q := Std.BinomialHeap.empty.insert ⟨⟨(start.1 : Int), (start.2 : Int)⟩, 0⟩
-      q := Std.BinomialHeap.empty.insert ⟨⟨0, 0⟩, 0⟩
+      q := Std.BinomialHeap.empty.insert ⟨⟨start.1, start.2⟩, 0⟩
       dists := Vec₂.mkVec₂ n m none,
       curdist := 0 }
   let finalGrid := (StateT.run (bfs 0) initEnv).2.grid
   printGrid finalGrid
   return s!"bla"
 
-#eval debug1 realinput
+--#eval debug1 realinput
 
 def firstPart (input : FilePath) : IO String := do
   let rawdata := (← IO.FS.lines input).map String.toCharArray
@@ -187,12 +189,13 @@ def debug3 (input : FilePath) : IO String := do
   let f (d : Nat) (x? : Option Nat) : Bool :=
     match x? with
     | none => false
-    | some x => x ≤ d ∧ x % 2 = 1
+    | some x => x ≤ d
   let max' : Nat → Option Nat → Nat := fun x y? => match y? with | none => x | some y => max x y
   let rawdata := (← IO.FS.lines input).map String.toCharArray
   let some ⟨n, m, grid⟩ := rawdata.toVec₂ | return "Rows not all the same size"
   let some start := grid.val.findIdx₂ (· == 'S') | return "Error"
-  let mid := getDists grid ⟨n/2, n/2⟩
+  --let mid := getDists grid ⟨196, 196⟩
+  let mid := getDists grid ⟨196, 196⟩
   --let bl := getDists grid ⟨n-1, 0⟩
   --let bm := getDists grid ⟨n-1, n/2⟩
   --let br := getDists grid ⟨n-1, m-1⟩
@@ -232,7 +235,8 @@ def secondPart (input : FilePath) : IO String := do
 
 --#eval debug2 testinput1           --(ans: )
 --#eval debug2 realinput           --(ans: )
-#eval debug3 realinput           --(ans: )
+--#eval debug3 realinput           --(ans: )
+--#eval debug3 biginput           --(ans: )
 --#eval debug4 realinput           --(ans: )
 --#eval secondPart testinput1           --(ans: )
 --#eval secondPart realinput           --(ans: )
