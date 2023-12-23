@@ -170,7 +170,6 @@ partial def getEdge (grid : Vec₂ n m Char) (nodes : Std.RBSet Pos compare)
     (start cur : Pos) (prevdir : Direction) (dist := 1) : Option (Pos × Nat) :=
   match nodes.find? cur with
   | none =>
-      --dbg_trace s!"here, cur = {cur}, prevdir = {prevdir}, dist = {dist}"
       -- not there yet
       let opendirs : List Direction := Direction.fold (init := [])
         fun acc dir =>
@@ -211,37 +210,24 @@ def getEdges (grid : Vec₂ n m Char) (nodes : Std.RBSet Pos compare) :
 
 structure GraphState where
   graph : Std.RBMap Pos (List (Pos × Nat)) compare
-  best : Nat
   target : Pos
-  q : Std.Queue (Pos × Nat × Std.RBSet Pos compare)
 deriving Inhabited
 
-def popQueue₂ : StateM GraphState (Option (Pos × Nat × Std.RBSet Pos compare)) := do
-  let env ← get
-  match env.q.dequeue? with
-  | none => return none
-  | some ⟨⟨pos, dist, path⟩, q'⟩ =>
-      set { env with q := q' }
-      return some ⟨pos, dist, path⟩
-
-partial def search₂ : StateM GraphState Nat := do
-  match (← popQueue₂) with
-  | none => return (← get).best
-  | some ⟨pos, dist, path⟩ =>
-      let e ← get
-      if pos = e.target then
-        if dist > e.best then
-          set { e with best := dist }
-        search₂
-      else
-        match path.find? pos with
-        | none =>
-            let edges := e.graph.find! pos
-            let newq := edges.foldl (init := e.q) fun qacc edge =>
-              qacc.enqueue ⟨edge.1, dist + edge.2, path.insert pos⟩
-            set { e with q := newq }
-            search₂
-        | some _ => search₂
+partial def dfs (pos : Pos) (dist : Nat) (path : Std.RBSet Pos compare) :
+    StateM GraphState (Option Nat) := do
+  let e ← get
+  if pos = e.target then return some dist
+  else
+    match path.find? pos with
+    | none =>
+        let edges := e.graph.find! pos
+        let best ← edges.foldlM (init := 0) fun acc edge => do
+          let curtry ← dfs edge.1 (dist + edge.2) (path.insert pos)
+          match curtry with
+          | none => return acc
+          | some value => if value > acc then return value else return acc
+        return best
+    | some _ => return none
 
 def secondPart (input : FilePath) : IO String := do
   let some ⟨n, m, grid⟩ := (← IO.FS.lines input).map String.toCharArray
@@ -250,10 +236,9 @@ def secondPart (input : FilePath) : IO String := do
   let graph := getEdges grid nodes
   let initst : GraphState :=
     { graph := graph
-      best := 0
-      target := ⟨n-2, m-2⟩
-      q := Std.Queue.empty.enqueue ⟨⟨1, 1⟩, 2, Std.RBSet.empty⟩}
-  let out := StateT.run' (m := Id) search₂ initst
+      target := ⟨n-2, m-2⟩ }
+  let some out := StateT.run' (m := Id) (dfs ⟨1, 1⟩ 2 Std.RBSet.empty) initst
+    | return "WTF"
   return s!"{out}"
 
 --#eval secondPart testinput1           --(ans: 154)
