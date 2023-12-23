@@ -101,18 +101,17 @@ def pullDown (bricks : Array Brick) (i j : Nat) : Array Brick := Id.run do
     let curdiff := out[i]!.bottom - 1
     return (out.set! i (out[i]! - curdiff))
 
-def pushDownAll (bricks : Array Brick) : Array Brick :=
-  Nat.fold (n := bricks.size) (init := bricks) fun i br =>
-    (pullDown br i i).qsort (fun b₁ b₂ => b₁.top < b₂.top)
-
-def countSupportingOf (bricks : Array Brick) (i : Nat) : Nat := Id.run do
-  let mut acc := 0
+def pushDown (bricks : Array Brick) (i : Nat) : Array Brick := Id.run do
+  let mut out := bricks
   for j' in [1:i+1] do
     let j := i - j'
-    --dbg_trace s!"{j}, {i}"
-    if bricks[j]!.top < bricks[i]!.bottom - 1 then return acc
-    if bricks[j]!.supports bricks[i]! then acc := acc+1
-  return acc
+    if out[j]!.top > out[j+1]!.top then
+      out := out.swap! j (j+1)
+  return out
+
+def pushDownAll (bricks : Array Brick) : Array Brick :=
+  Nat.fold (n := bricks.size) (init := bricks) fun i br =>
+    pushDown (pullDown br i i) i
 
 def findSupporting (bricks : Array Brick) (i : Nat) : Option Nat := Id.run do
   let mut acc : Nat := 0
@@ -126,6 +125,24 @@ def findSupporting (bricks : Array Brick) (i : Nat) : Option Nat := Id.run do
       first := j
   if acc = 1 then return some first else return none
 
+def findAllSupporting (bricks : Array Brick) (i : Nat) : List Nat := Id.run do
+  let mut acc : List Nat := []
+  for j' in [1:i+1] do
+    let j := i - j'
+    if bricks[j]!.top < bricks[i]!.bottom - 1 then
+      return acc
+    if bricks[j]!.supports bricks[i]! then
+      acc := j :: acc
+  return acc
+
+def findAllSupported (bricks : Array Brick) (i : Nat) : List Nat := Id.run do
+  let n := bricks.size
+  let mut acc : List Nat := []
+  for j in [i+1:n] do
+    if bricks[i]!.supports bricks[j]! then
+      acc := j :: acc
+  return acc
+
 def markSupporting (bricks : Array Brick) : Array Bool :=
   let n := bricks.size
   Nat.fold (n := n) (init := Array.mkArray n false) fun i acc =>
@@ -136,36 +153,79 @@ def markSupporting (bricks : Array Brick) : Array Bool :=
 def countSupporting (bricks : Array Brick) : Nat :=
   (markSupporting bricks).count id
 
-def findNontrivial (bricks : Array Brick) : IO Unit :=
-  for h : i in [0:bricks.size] do
-    if bricks[i].top ≠ bricks[i].bottom then
-      IO.println s!"{i}: {bricks[i]}"
-
 def firstPart (input : FilePath) : IO String := do
   let some bricksUnsorted := (← IO.FS.lines input).mapM (fun s => String.parse? s parseBrick)
     | return "Parse error"
-  --findNontrivial bricksUnsorted
   let rawbricks := bricksUnsorted.qsort (fun b₁ b₂ => b₁.top < b₂.top)
   let bricks := pushDownAll rawbricks
-  IO.println <| bricks.mapIdx (fun i _ => countSupportingOf bricks i)
-  IO.println <| bricks.mapIdx (fun i _ => findSupporting bricks i)
-  IO.println <| markSupporting bricks
-  --IO.println (countSupportingOf bricks 1)
   return s!"{bricks.size - countSupporting bricks}"
-  --return s!"{bricks.size}"
 
 --#eval firstPart testinput1           --(ans: 5)
 --#eval firstPart testinput2
 --#eval firstPart testinput3
---#eval firstPart realinput           --(ans: )   -- 1457 bricks in total
+--#eval firstPart realinput           --(ans: 477)   -- 1457 bricks in total
 
 /-
 PART 2:
 -/
 
+def iAmFalling (supporting : List Nat) (falling : Array Bool) : Bool :=
+  supporting.foldl (init := true) fun acc i => acc && falling[i]!
+
+structure BFSState where
+  bricks : Array Brick
+  supported : Array (List Nat)
+  supporting : Array (List Nat)
+  falling : Array Bool
+  q : Std.BinomialHeap (Nat × Brick) (fun b₁ b₂ => b₁.2.top ≤ b₂.2.top)
+
+def popQueue : StateM BFSState (Option (Nat × Brick)) := do
+  let env ← get
+  match env.q.deleteMin with
+  | none => return none
+  | some ⟨⟨idx, b⟩, q'⟩ =>
+      set { env with q := q' }
+      return some ⟨idx, b⟩
+
+partial def bfs (fuel := 0) (start := true) : StateM BFSState (Array Bool) := do
+  --if fuel = 0 then return (← get).dists
+  match (← popQueue) with
+  | none => return (← get).falling
+  | some ⟨idx, _⟩ =>
+      let e ← get
+      if iAmFalling e.supporting[idx]! e.falling || start then
+        let enqueued : List (Nat × Brick) :=
+          e.supported[idx]!.foldl (init := []) fun acc i => ⟨i, e.bricks[i]!⟩ :: acc
+        set { e with
+              falling := e.falling.set! idx true
+              q := enqueued.foldl (init := e.q) fun acc elem => acc.insert elem }
+        bfs (fuel - 1) false
+      else bfs (fuel-1) false
+
+def findFalling (bricks : Array Brick) (supporting supported : Array (List Nat)) (i : Nat) : Array Bool :=
+  let initEnv : BFSState :=
+    { bricks := bricks
+      supported := supported
+      supporting := supporting
+      falling := (Array.mkArray bricks.size false).set! i true
+      q := Std.BinomialHeap.empty.insert ⟨i, bricks[i]!⟩ }
+  StateT.run' (m := Id) (bfs 0) initEnv
+
+def countFalling (bricks : Array Brick) (supporting supported : Array (List Nat)) (i : Nat) : Nat :=
+  let falling := findFalling bricks supporting supported i
+  (falling.count id) - 1
+
 def secondPart (input : FilePath) : IO String := do
-  let rawdata := (← IO.FS.lines input)
-  return s!"bla"
+  let some bricksUnsorted := (← IO.FS.lines input).mapM (fun s => String.parse? s parseBrick)
+    | return "Parse error"
+  let rawbricks := bricksUnsorted.qsort (fun b₁ b₂ => b₁.top < b₂.top)
+  let bricks := pushDownAll rawbricks
+  let supporting := bricks.mapIdx (fun i _ => findAllSupporting bricks i)
+  let supported := bricks.mapIdx (fun i _ => findAllSupported bricks i)
+  let mut total := 0
+  for i in [0:bricks.size] do
+    total := total + countFalling bricks supporting supported i
+  return s!"{total}"
 
 --#eval secondPart testinput1           --(ans: )
 --#eval secondPart realinput           --(ans: )
