@@ -5,6 +5,7 @@ import Std.Data.BitVec.Basic
 import Std.Data.Int.Lemmas
 import Init.Data.String.Basic
 import Aoc2023.AesopExtra
+import Std.Tactic.Omega.Frontend
 --import Aoc2023.SetElem
 
 notation "Array₂ " α => Array (Array α)
@@ -25,6 +26,9 @@ theorem Membership.mem_upper {i a b step : Nat} (h : i ∈ (⟨a, b, step⟩ : S
 
 macro_rules
 | `(tactic|get_elem_tactic_trivial) => `(tactic|exact Membership.mem_upper ‹_›)
+
+macro_rules
+| `(tactic|get_elem_tactic_trivial) => `(tactic|omega)
 
 attribute [aesop safe forward] Nat.not_lt_zero
 
@@ -412,18 +416,19 @@ theorem size_val (as : Vec₂ n m α) : as.val.size = n := by rw [as.property.1]
 
 @[simp]
 theorem size_val_get_fin (as : Vec₂ n m α) (i : Fin as.val.size) : as.val[i].size = m := by
-  simp [as.property.2]
+  simp only [getElem_fin, as.property.2 i i.isLt]
 
 @[simp]
 theorem size_val_get (as : Vec₂ n m α) (i : Nat) {hi : i < n} :
     (as.val[i]'(by simp [hi])).size = m := by
-  simp [as.property.2]
+  have : i < as.val.size := by rwa [as.property.1]
+  simp [as.property.2 i this]
 
 def getRow (grid : Vec₂ n m α) (i : Nat) (hi : i < n) : Vec m α where
   val :=
     have hi' : i < grid.val.size := by rw [grid.property.1]; exact hi
     grid.val[i]
-  property := grid.property.2 i _
+  property := grid.property.2 i (by rwa [grid.property.1])
 
 instance instGetElemNatVec₂ : GetElem (Vec₂ n m α) Nat (Vec m α) (fun _ i => i < n) where
   getElem xs i hi := xs.getRow i hi
@@ -469,7 +474,7 @@ def set! (as : Vec₂ n m α) (i j : Nat) (a : α) :=
   if hi : i < n then
     if hj : j < m then
       let hi' : i < as.val.size := by rwa [as.property.1]
-      let hj' : j < as.val[i].size := by rwa [as.property.2]
+      let hj' : j < as.val[i].size := by rwa [as.property.2 _ hi']
       ⟨as.val.set ⟨i, hi'⟩ (as.val[i].set ⟨j, hj'⟩ a), by
         refine ⟨?_, ?_⟩
         rw [Array.size_set, as.property.1]
@@ -487,8 +492,6 @@ def setInt (as : Vec₂ n m α) (pos : Int × Int) (a : α) :=
 
 def getD (as : Vec₂ n m α) (i j : Nat) (d : α) : α :=
   if h : i < n ∧ j < m then
-    have hi := h.1
-    have hj := h.2
     as[i][j]
   else d
 
