@@ -743,6 +743,17 @@ def length (q : Std.Queue α) : Nat :=
 
 end Std.Queue
 
+namespace Std.HashMap
+
+def insertModify [BEq α] [Hashable α] (mp : Std.HashMap α β) (k : α) (d : β) (f : α → β → β) :
+    Std.HashMap α β :=
+  match mp.find? k with
+  | none => mp.insert k (f k d)
+  | some _ => mp.modify k f
+
+end Std.HashMap
+
+
 namespace Std.BitVec
 
 def foldls (v : BitVec n) (f : α → Bool → α) (init : α) : α :=
