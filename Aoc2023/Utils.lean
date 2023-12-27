@@ -776,11 +776,33 @@ end Std.BitVec
 -- * MISC *
 -- ********
 
-class Foldable (cont : Type u) (elem : Type v) where
-  fold : cont → (α → elem → α) → α → α
+def StdGenT (m : Type u → Type v) (α : Type u) : Type v := StdGen → m (α × StdGen)
 
-export Foldable (fold)
+instance [Monad m] : Monad (StdGenT m) where
+  pure x := fun g => pure ⟨x, g⟩
+  bind result next := fun g => do
+    let ⟨a, g'⟩ ← result g
+    let ⟨g₁, _⟩ := stdSplit g'
+    next a g₁
 
---class Container (cont : Type u) (idx : Type v) (elem : outParam (Type w))
---    (dom : outParam (cont → idx → Prop))
---    [GetElem cont idx elem dom] [SetElem cont idx elem dom] [Foldable cont elem] where
+instance [Monad m] : MonadLift m (StdGenT m) where
+  monadLift action := fun g => do
+    let a ← action
+    pure ⟨a, g⟩
+
+def initStdGen [Monad m] (seed := 0) : StdGenT m Unit := fun _ => pure ⟨(), mkStdGen seed⟩
+
+def randNum [Monad m] (lo hi : Nat) : StdGenT m Nat := fun g => return (randNat g lo hi)
+
+def randBit [Monad m] : StdGenT m Bool := fun g => return (randBool g)
+
+--instance [Monad m] [LawfulMonad m] : LawfulMonad (StdGenT m) where
+--  map_const := by sorry
+--  id_map := sorry
+--  seqLeft_eq := sorry
+--  seqRight_eq := sorry
+--  pure_seq := sorry
+--  bind_pure_comp := sorry
+--  bind_map := sorry
+--  pure_bind := sorry
+--  bind_assoc := sorry
