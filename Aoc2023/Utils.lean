@@ -682,6 +682,14 @@ def natNum : Parsec Nat := attempt do
 @[inline]
 def natDigit : Parsec Nat := attempt do return (← digit).toNatDigit
 
+def negNum : Parsec Int := attempt do
+  let _ ← pchar '-'
+  let n ← natNum
+  return (-n)
+
+@[inline]
+def intNum : Parsec Int := (do let n ← natNum; return (n : Int)) <|> negNum
+
 @[inline]
 def alphanum : Parsec Char := attempt do
   let c ← anyChar
